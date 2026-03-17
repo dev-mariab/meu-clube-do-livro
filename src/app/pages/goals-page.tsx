@@ -32,10 +32,18 @@ export function GoalsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [goalsData, statsData] = await Promise.all([
-        api.getGoals().catch(() => ({ yearlyBookGoal: null, yearlyPageGoal: null })),
+      const [goalsResult, statsResult] = await Promise.allSettled([
+        api.getGoals(),
         api.getStats(),
       ]);
+
+      const goalsData = goalsResult.status === "fulfilled"
+        ? goalsResult.value
+        : { yearlyBookGoal: null, yearlyPageGoal: null };
+
+      const statsData = statsResult.status === "fulfilled"
+        ? statsResult.value
+        : { booksRead: 0, pagesThisYear: 0 };
       
       setGoals(goalsData);
       setFormData({
@@ -48,9 +56,9 @@ export function GoalsPage() {
       });
     } catch (error: any) {
       console.error("Error loading goals:", error);
-      if (!error.message?.includes("Unauthorized") && !error.message?.includes("401")) {
-        toast.error("Erro ao carregar metas");
-      }
+      setGoals({ yearlyBookGoal: null, yearlyPageGoal: null });
+      setFormData({ yearlyBookGoal: "", yearlyPageGoal: "" });
+      setStats({ booksRead: 0, pagesThisYear: 0 });
     } finally {
       setIsLoading(false);
     }
