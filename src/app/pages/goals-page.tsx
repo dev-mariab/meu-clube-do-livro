@@ -46,9 +46,11 @@ export function GoalsPage() {
         booksRead: statsData.booksRead,
         pagesThisYear: statsData.pagesThisYear,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading goals:", error);
-      toast.error("Erro ao carregar metas");
+      if (!error.message?.includes("Unauthorized") && !error.message?.includes("401")) {
+        toast.error("Erro ao carregar metas");
+      }
     } finally {
       setIsLoading(false);
     }

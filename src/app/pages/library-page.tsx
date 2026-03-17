@@ -25,9 +25,11 @@ export function LibraryPage() {
       setIsLoading(true);
       const booksData = await api.getBooks();
       setBooks(booksData);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading books:", error);
-      toast.error("Erro ao carregar biblioteca.");
+      if (!error.message?.includes("Unauthorized") && !error.message?.includes("401")) {
+        toast.error("Erro ao carregar biblioteca.");
+      }
     } finally {
       setIsLoading(false);
     }
