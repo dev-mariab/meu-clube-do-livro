@@ -14,7 +14,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/",
-    element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
+    Component: () => (
+      <ProtectedRoute>
+        <DashboardLayout />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, Component: HomePage },
       { path: "biblioteca", Component: LibraryPage },
