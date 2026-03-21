@@ -8,7 +8,7 @@ import { Card } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { auth } from "../lib/supabase";
 import { toast } from "sonner";
-import { projectId, publicAnonKey } from "/utils/supabase/info";
+import { projectId, publicAnonKey } from "../../../supabase/info";
 import girlClubImage from "figma:asset/b4f73c70509561e14c7a7104d7d022609cadadae.png";
 
 export function AuthPage() {
