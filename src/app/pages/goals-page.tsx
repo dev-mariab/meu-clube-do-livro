@@ -32,18 +32,10 @@ export function GoalsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [goalsResult, statsResult] = await Promise.allSettled([
-        api.getGoals(),
+      const [goalsData, statsData] = await Promise.all([
+        api.getGoals().catch(() => ({ yearlyBookGoal: null, yearlyPageGoal: null })),
         api.getStats(),
       ]);
-
-      const goalsData = goalsResult.status === "fulfilled"
-        ? goalsResult.value
-        : { yearlyBookGoal: null, yearlyPageGoal: null };
-
-      const statsData = statsResult.status === "fulfilled"
-        ? statsResult.value
-        : { booksRead: 0, pagesThisYear: 0 };
       
       setGoals(goalsData);
       setFormData({
@@ -54,11 +46,9 @@ export function GoalsPage() {
         booksRead: statsData.booksRead,
         pagesThisYear: statsData.pagesThisYear,
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error loading goals:", error);
-      setGoals({ yearlyBookGoal: null, yearlyPageGoal: null });
-      setFormData({ yearlyBookGoal: "", yearlyPageGoal: "" });
-      setStats({ booksRead: 0, pagesThisYear: 0 });
+      toast.error("Erro ao carregar metas");
     } finally {
       setIsLoading(false);
     }

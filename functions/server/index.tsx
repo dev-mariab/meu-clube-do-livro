@@ -41,40 +41,31 @@ const BUCKET_NAME = "make-93f7c220-book-covers";
 
 // Helper function to get user ID from token
 async function getUserId(authHeader: string | null): Promise<string | null> {
+  console.log("[Auth] ========== getUserId called ==========");
+  console.log("[Auth] authHeader:", authHeader ? `${authHeader.substring(0, 50)}...` : "null");
+  
   if (!authHeader) {
-    console.log("[Auth] No authorization header");
+    console.log("[Auth] ❌ No Authorization header");
     return null;
   }
   
+  // Extract token from "Bearer <token>"
   const token = authHeader.replace("Bearer ", "");
-  if (!token) {
-    console.log("[Auth] No token in header");
+  
+  if (!token || token === authHeader) {
+    console.log("[Auth] ❌ Invalid Authorization header format (expected 'Bearer <token>')");
     return null;
   }
 
-  console.log(`[Auth] Validating token (first 30 chars): ${token.substring(0, 30)}...`);
+  console.log(`[Auth] Using token (first 50 chars): ${token.substring(0, 50)}...`);
   console.log(`[Auth] Token length: ${token.length}`);
 
   try {
-    // Create a client with the user's token
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      {
-        global: {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      }
-    );
-    
-    // Get user from the token
-    const { data: { user }, error } = await userClient.auth.getUser();
+    // Use Supabase to validate the JWT token
+    const { data: { user }, error } = await supabase.auth.getUser(token);
     
     if (error) {
-      console.log("[Auth] ❌ Token validation error:", error.message);
-      console.log("[Auth] Error details:", JSON.stringify(error));
+      console.log("[Auth] ❌ Supabase getUser error:", error.message);
       return null;
     }
     
@@ -83,10 +74,10 @@ async function getUserId(authHeader: string | null): Promise<string | null> {
       return null;
     }
     
-    console.log(`[Auth] ✅ Valid token for user: ${user.id} (${user.email})`);
+    console.log(`[Auth] ✅✅✅ Token validated successfully for user: ${user.id} (${user.email})`);
     return user.id;
   } catch (error) {
-    console.log("[Auth] ❌ Exception validating token:", error);
+    console.log("[Auth] ❌ Exception in getUserId:", error);
     return null;
   }
 }
@@ -136,6 +127,23 @@ app.get(`${prefix}/test`, async (c) => {
     success: true, 
     message: "Server is working!",
     hasAuthHeader: !!authHeader,
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Debug route - test token decoding
+app.get(`${prefix}/debug-token`, async (c) => {
+  console.log("[DEBUG] Debug token route called");
+  const authHeader = c.req.header("Authorization");
+  
+  console.log("[DEBUG] Authorization header:", authHeader ? "present" : "missing");
+  
+  const userId = await getUserId(authHeader);
+  
+  return c.json({
+    hasAuthHeader: !!authHeader,
+    userId: userId,
+    isAuthenticated: !!userId,
     timestamp: new Date().toISOString()
   });
 });

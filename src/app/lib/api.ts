@@ -25,10 +25,10 @@ async function getHeaders() {
       throw new Error("Not authenticated");
     }
     
-    console.log("[API] ✅ Creating authorization header with token");
-    console.log("[API] Full token:", session.access_token);
+    console.log("[API] ✅ Creating headers with user JWT token");
     
     return {
+      // Send user's JWT token directly in Authorization header (standard way)
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     };

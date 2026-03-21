@@ -8,6 +8,7 @@ import { SkeletonBookCard } from "../components/skeleton-book-card";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Book, BookStatus } from "../types";
 import { api } from "../lib/api";
+import { toast } from "sonner";
 
 export function LibraryPage() {
   const [books, setBooks] = useState<Book[]>([]);
@@ -24,9 +25,9 @@ export function LibraryPage() {
       setIsLoading(true);
       const booksData = await api.getBooks();
       setBooks(booksData);
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error loading books:", error);
-      setBooks([]);
+      toast.error("Erro ao carregar biblioteca.");
     } finally {
       setIsLoading(false);
     }

@@ -13,6 +13,11 @@ export const supabase = createClient(
   }
 );
 
+// Expose for debugging
+if (typeof window !== 'undefined') {
+  (window as any).supabase = supabase;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -100,3 +105,8 @@ export const auth = {
     });
   },
 };
+
+// Expose for debugging
+if (typeof window !== 'undefined') {
+  (window as any).auth = auth;
+}
