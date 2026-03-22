@@ -1,4 +1,4 @@
-import { projectId, publicAnonKey } from "../../../supabase/info";
+import { projectId, publicAnonKey } from "../../supabase/info";
 import { Book, ReadingStats } from "../types";
 import { auth } from "./supabase";
 
@@ -7,9 +7,43 @@ const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-93f7c
 async function getHeaders() {
   try {
     console.log("[API] ========== Getting session ==========");
-    const session = await auth.getSession();
     
-    console.log("[API] Session data:", {
+    // Try refreshing the session first to ensure we have a valid token
+    const { data: refreshData, error: refreshError } = await auth.supabase.auth.refreshSession();
+    
+    if (refreshError) {
+      console.log("[API] ⚠️ Refresh session error (trying getSession):", refreshError.message);
+      // Fallback to getSession if refresh fails
+      const session = await auth.getSession();
+      
+      console.log("[API] Session data:", {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        hasUser: !!session?.user,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        tokenPreview: session?.access_token?.substring(0, 30),
+        tokenLength: session?.access_token?.length,
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
+      });
+      
+      if (!session?.access_token) {
+        console.error("[API] ❌ No valid session or access token available");
+        throw new Error("Not authenticated");
+      }
+      
+      console.log("[API] ✅ Creating headers with user JWT token");
+      
+      return {
+        // Send user's JWT token directly in Authorization header (standard way)
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      };
+    }
+    
+    // Use the refreshed session
+    const session = refreshData.session;
+    console.log("[API] Refreshed session data:", {
       hasSession: !!session,
       hasAccessToken: !!session?.access_token,
       hasUser: !!session?.user,
@@ -21,11 +55,11 @@ async function getHeaders() {
     });
     
     if (!session?.access_token) {
-      console.error("[API] ❌ No valid session or access token available");
+      console.error("[API] ❌ No valid session or access token available after refresh");
       throw new Error("Not authenticated");
     }
     
-    console.log("[API] ✅ Creating headers with user JWT token");
+    console.log("[API] ✅ Creating headers with refreshed JWT token");
     
     return {
       // Send user's JWT token directly in Authorization header (standard way)
@@ -190,16 +224,45 @@ export const api = {
 
   // Set reading goals
   async setGoals(yearlyBookGoal: number | null, yearlyPageGoal: number | null): Promise<void> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/goals`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ yearlyBookGoal, yearlyPageGoal }),
-    });
-    
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to set goals");
+    try {
+      console.log("[API setGoals] ========== Setting goals ==========");
+      console.log("[API setGoals] Input:", { yearlyBookGoal, yearlyPageGoal });
+      
+      const headers = await getHeaders();
+      console.log("[API setGoals] Headers obtained, making POST request to:", `${API_URL}/goals`);
+      
+      const requestBody = { yearlyBookGoal, yearlyPageGoal };
+      console.log("[API setGoals] Request body:", requestBody);
+      
+      const response = await fetch(`${API_URL}/goals`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(requestBody),
+      });
+      
+      console.log("[API setGoals] Response status:", response.status);
+      console.log("[API setGoals] Response ok:", response.ok);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[API setGoals] ❌ Error response text:", errorText);
+        
+        let error;
+        try {
+          error = JSON.parse(errorText);
+        } catch {
+          error = { error: errorText };
+        }
+        
+        console.error("[API setGoals] ❌ Parsed error:", error);
+        throw new Error(error.error || "Failed to set goals");
+      }
+      
+      const responseData = await response.json();
+      console.log("[API setGoals] ✅ Success! Response data:", responseData);
+    } catch (error) {
+      console.error("[API setGoals] ❌❌❌ Exception caught:", error);
+      throw error;
     }
   },
 };

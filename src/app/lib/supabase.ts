@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { projectId, publicAnonKey } from "../../../supabase/info";
+import { projectId, publicAnonKey } from "../../supabase/info";
 
 export const supabase = createClient(
   `https://${projectId}.supabase.co`,
@@ -25,6 +25,9 @@ export interface AuthUser {
 }
 
 export const auth = {
+  // Expose supabase client for direct access when needed
+  supabase: supabase,
+  
   // Get current session with automatic refresh
   async getSession() {
     try {
