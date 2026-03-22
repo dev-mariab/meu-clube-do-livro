@@ -1,4 +1,4 @@
-import { projectId, publicAnonKey } from "../../../supabase/info";
+import { projectId } from "../../../supabase/info";
 import { Book, ReadingStats } from "../types";
 import { auth } from "./supabase";
 
@@ -6,49 +6,17 @@ const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-93f7c
 
 async function getHeaders() {
   try {
-    console.log("[API] ========== Getting session ==========");
-    
-    // First, check if we have any session at all
-    const { data: currentData } = await auth.supabase.auth.getSession();
-    
-    if (!currentData?.session) {
-      console.error("[API] ❌ No current session available");
-      throw new Error("Not authenticated");
+    // Nao faz refresh por request para evitar corrida com refresh token.
+    const { data, error } = await auth.supabase.auth.getSession();
+    if (error) {
+      throw new Error(error.message || "Not authenticated");
     }
-    
-    console.log("[API] Found existing session, attempting to refresh...");
-    
-    // Try refreshing the session to ensure we have a valid token
-    const { data: refreshData, error: refreshError } = await auth.supabase.auth.refreshSession();
-    
-    if (refreshError) {
-      console.log("[API] ⚠️ Refresh session error:", refreshError.message);
-      // Use current session if refresh fails
-      const session = currentData.session;
-      
-      if (!session?.access_token) {
-        console.error("[API] ❌ No valid access token available");
-        throw new Error("Not authenticated");
-      }
-      
-      console.log("[API] ✅ Using current session token");
-      
-      return {
-        Authorization: `Bearer ${session.access_token}`,
-        "Content-Type": "application/json",
-      };
-    }
-    
-    // Use the refreshed session
-    const session = refreshData.session;
-    
+
+    const session = data?.session;
     if (!session?.access_token) {
-      console.error("[API] ❌ No access token in refreshed session");
       throw new Error("Not authenticated");
     }
-    
-    console.log("[API] ✅ Using refreshed session token");
-    
+
     return {
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
