@@ -1,4 +1,4 @@
-import { projectId, publicAnonKey } from "../../supabase/info";
+import { projectId, publicAnonKey } from "../../../supabase/info";
 import { Book, ReadingStats } from "../types";
 import { auth } from "./supabase";
 
