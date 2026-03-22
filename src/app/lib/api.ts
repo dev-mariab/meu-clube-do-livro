@@ -8,34 +8,32 @@ async function getHeaders() {
   try {
     console.log("[API] ========== Getting session ==========");
     
-    // Try refreshing the session first to ensure we have a valid token
+    // First, check if we have any session at all
+    const { data: currentData } = await auth.supabase.auth.getSession();
+    
+    if (!currentData?.session) {
+      console.error("[API] ❌ No current session available");
+      throw new Error("Not authenticated");
+    }
+    
+    console.log("[API] Found existing session, attempting to refresh...");
+    
+    // Try refreshing the session to ensure we have a valid token
     const { data: refreshData, error: refreshError } = await auth.supabase.auth.refreshSession();
     
     if (refreshError) {
-      console.log("[API] ⚠️ Refresh session error (trying getSession):", refreshError.message);
-      // Fallback to getSession if refresh fails
-      const session = await auth.getSession();
-      
-      console.log("[API] Session data:", {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        hasUser: !!session?.user,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email,
-        tokenPreview: session?.access_token?.substring(0, 30),
-        tokenLength: session?.access_token?.length,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
-      });
+      console.log("[API] ⚠️ Refresh session error:", refreshError.message);
+      // Use current session if refresh fails
+      const session = currentData.session;
       
       if (!session?.access_token) {
-        console.error("[API] ❌ No valid session or access token available");
+        console.error("[API] ❌ No valid access token available");
         throw new Error("Not authenticated");
       }
       
-      console.log("[API] ✅ Creating headers with user JWT token");
+      console.log("[API] ✅ Using current session token");
       
       return {
-        // Send user's JWT token directly in Authorization header (standard way)
         Authorization: `Bearer ${session.access_token}`,
         "Content-Type": "application/json",
       };
@@ -43,26 +41,15 @@ async function getHeaders() {
     
     // Use the refreshed session
     const session = refreshData.session;
-    console.log("[API] Refreshed session data:", {
-      hasSession: !!session,
-      hasAccessToken: !!session?.access_token,
-      hasUser: !!session?.user,
-      userId: session?.user?.id,
-      userEmail: session?.user?.email,
-      tokenPreview: session?.access_token?.substring(0, 30),
-      tokenLength: session?.access_token?.length,
-      expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'N/A'
-    });
     
     if (!session?.access_token) {
-      console.error("[API] ❌ No valid session or access token available after refresh");
+      console.error("[API] ❌ No access token in refreshed session");
       throw new Error("Not authenticated");
     }
     
-    console.log("[API] ✅ Creating headers with refreshed JWT token");
+    console.log("[API] ✅ Using refreshed session token");
     
     return {
-      // Send user's JWT token directly in Authorization header (standard way)
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     };
