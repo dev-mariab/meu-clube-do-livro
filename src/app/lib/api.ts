@@ -4,6 +4,8 @@ import { auth } from "./supabase";
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-93f7c220`;
 
+let refreshPromise: Promise<void> | null = null;
+
 async function getHeaders() {
   try {
     // Nao faz refresh por request para evitar corrida com refresh token.
@@ -28,6 +30,51 @@ async function getHeaders() {
   }
 }
 
+async function refreshSessionSafely(): Promise<void> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const { error } = await auth.supabase.auth.refreshSession();
+      if (error) {
+        throw new Error(error.message || "Failed to refresh session");
+      }
+    })().finally(() => {
+      refreshPromise = null;
+    });
+  }
+
+  return refreshPromise;
+}
+
+async function fetchWithAuth(input: string, init: RequestInit = {}): Promise<Response> {
+  const headers = await getHeaders();
+  let response = await fetch(input, {
+    ...init,
+    headers: {
+      ...headers,
+      ...(init.headers || {}),
+    },
+  });
+
+  // Retry once on 401 to handle token propagation/expiry race right after login.
+  if (response.status === 401) {
+    try {
+      await refreshSessionSafely();
+      const retryHeaders = await getHeaders();
+      response = await fetch(input, {
+        ...init,
+        headers: {
+          ...retryHeaders,
+          ...(init.headers || {}),
+        },
+      });
+    } catch {
+      // Ignored here; handled below as auth failure.
+    }
+  }
+
+  return response;
+}
+
 async function handleAuthError(response: Response, fallbackMessage: string): Promise<never> {
   const errorData = await response.json().catch(() => ({} as any));
   const rawMessage = errorData?.error || errorData?.message || fallbackMessage;
@@ -50,10 +97,8 @@ async function handleAuthError(response: Response, fallbackMessage: string): Pro
 export const api = {
   // Upload book cover
   async uploadCover(imageData: string, fileName: string): Promise<string> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/upload-cover`, {
+    const response = await fetchWithAuth(`${API_URL}/upload-cover`, {
       method: "POST",
-      headers,
       body: JSON.stringify({ image: imageData, fileName }),
     });
     
@@ -68,8 +113,7 @@ export const api = {
   // Get all books
   async getBooks(): Promise<Book[]> {
     try {
-      const headers = await getHeaders();
-      const response = await fetch(`${API_URL}/books`, { headers });
+      const response = await fetchWithAuth(`${API_URL}/books`);
       
       if (!response.ok) {
         return handleAuthError(response, `Failed to fetch books (${response.status})`);
@@ -85,8 +129,7 @@ export const api = {
 
   // Get single book
   async getBook(id: string): Promise<Book> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/books/${id}`, { headers });
+    const response = await fetchWithAuth(`${API_URL}/books/${id}`);
     if (!response.ok) {
       return handleAuthError(response, "Failed to fetch book");
     }
@@ -96,10 +139,8 @@ export const api = {
 
   // Create a new book
   async createBook(bookData: Omit<Book, "id" | "createdAt" | "updatedAt">): Promise<Book> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/books`, {
+    const response = await fetchWithAuth(`${API_URL}/books`, {
       method: "POST",
-      headers,
       body: JSON.stringify(bookData),
     });
     
@@ -112,10 +153,8 @@ export const api = {
 
   // Update a book
   async updateBook(id: string, bookData: Partial<Book>): Promise<Book> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/books/${id}`, {
+    const response = await fetchWithAuth(`${API_URL}/books/${id}`, {
       method: "PUT",
-      headers,
       body: JSON.stringify(bookData),
     });
     
@@ -128,10 +167,8 @@ export const api = {
 
   // Delete book
   async deleteBook(id: string): Promise<void> {
-    const headers = await getHeaders();
-    const response = await fetch(`${API_URL}/books/${id}`, {
+    const response = await fetchWithAuth(`${API_URL}/books/${id}`, {
       method: "DELETE",
-      headers,
     });
     if (!response.ok) {
       return handleAuthError(response, "Failed to delete book");
@@ -141,10 +178,7 @@ export const api = {
   // Get reading stats
   async getStats(): Promise<ReadingStats> {
     try {
-      const headers = await getHeaders();
-      const response = await fetch(`${API_URL}/stats`, {
-        headers,
-      });
+      const response = await fetchWithAuth(`${API_URL}/stats`);
       
       if (!response.ok) {
         return handleAuthError(response, `Failed to fetch stats (${response.status})`);
@@ -160,10 +194,7 @@ export const api = {
   // Get reading goals
   async getGoals(): Promise<{ yearlyBookGoal: number | null; yearlyPageGoal: number | null }> {
     try {
-      const headers = await getHeaders();
-      const response = await fetch(`${API_URL}/goals`, {
-        headers,
-      });
+      const response = await fetchWithAuth(`${API_URL}/goals`);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -202,15 +233,13 @@ export const api = {
       console.log("[API setGoals] ========== Setting goals ==========");
       console.log("[API setGoals] Input:", { yearlyBookGoal, yearlyPageGoal });
       
-      const headers = await getHeaders();
-      console.log("[API setGoals] Headers obtained, making POST request to:", `${API_URL}/goals`);
+      console.log("[API setGoals] Making POST request to:", `${API_URL}/goals`);
       
       const requestBody = { yearlyBookGoal, yearlyPageGoal };
       console.log("[API setGoals] Request body:", requestBody);
       
-      const response = await fetch(`${API_URL}/goals`, {
+      const response = await fetchWithAuth(`${API_URL}/goals`, {
         method: "POST",
-        headers,
         body: JSON.stringify(requestBody),
       });
       
