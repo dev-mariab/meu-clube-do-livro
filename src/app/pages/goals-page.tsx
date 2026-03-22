@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { Target, BookOpen, FileText, Sparkles, TrendingUp, Save } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,7 +11,6 @@ import { motion } from "motion/react";
 import { useAuth } from "../contexts/auth-context";
 
 export function GoalsPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,15 +28,12 @@ export function GoalsPage() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
     setIsLoading(true);
     try {
       const [goalsData, statsData] = await Promise.all([
@@ -57,12 +52,6 @@ export function GoalsPage() {
       });
     } catch (error: any) {
       console.error("Error loading goals:", error);
-      
-      if (error.message?.includes("401") || error.message?.includes("Not authenticated")) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      
       toast.error("Erro ao carregar metas");
     } finally {
       setIsLoading(false);

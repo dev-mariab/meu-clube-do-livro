@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { BookOpen, BookMarked, FileText, Plus, Library as LibraryIcon } from "lucide-react";
 import { StatsCard } from "../components/stats-card";
 import { BookCard } from "../components/book-card";
@@ -14,7 +13,6 @@ import { api } from "../lib/api";
 import { useAuth } from "../contexts/auth-context";
 
 export function HomePage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -29,18 +27,14 @@ export function HomePage() {
     yearlyPageGoal: null as number | null,
   });
 
-  // Load data from API
+  // Load data from API when user is available
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
-    if (!user) {
-      console.log("User not authenticated, redirecting to login");
-      navigate("/login", { replace: true });
-      return;
-    }
-
     setIsLoading(true);
     try {
       const [booksData, statsData, goalsData] = await Promise.all([
@@ -53,14 +47,6 @@ export function HomePage() {
       setGoals(goalsData);
     } catch (error: any) {
       console.error("Error loading data:", error);
-      
-      // Check for 401/authentication errors and redirect to login
-      if (error.message?.includes("401") || error.message?.includes("Not authenticated")) {
-        console.log("Authentication error, redirecting to login");
-        navigate("/login", { replace: true });
-        return;
-      }
-      
       toast.error("Erro ao carregar dados. Tente novamente.");
     } finally {
       setIsLoading(false);

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router";
 import { Search, Filter, Library as LibraryIcon } from "lucide-react";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
@@ -13,7 +12,6 @@ import { toast } from "sonner";
 import { useAuth } from "../contexts/auth-context";
 
 export function LibraryPage() {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [books, setBooks] = useState<Book[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -21,27 +19,18 @@ export function LibraryPage() {
   const [selectedStatus, setSelectedStatus] = useState<BookStatus | "all">("all");
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
   const loadData = async () => {
-    if (!user) {
-      navigate("/login", { replace: true });
-      return;
-    }
-
     try {
       setIsLoading(true);
       const booksData = await api.getBooks();
       setBooks(booksData);
     } catch (error: any) {
       console.error("Error loading books:", error);
-      
-      if (error.message?.includes("401") || error.message?.includes("Not authenticated")) {
-        navigate("/login", { replace: true });
-        return;
-      }
-      
       toast.error("Erro ao carregar biblioteca.");
     } finally {
       setIsLoading(false);
