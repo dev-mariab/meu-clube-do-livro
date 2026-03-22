@@ -1,4 +1,4 @@
-import { projectId } from "../../../supabase/info";
+import { projectId, publicAnonKey } from "../../../supabase/info";
 import { Book, ReadingStats } from "../types";
 import { auth } from "./supabase";
 
@@ -18,6 +18,7 @@ async function getHeaders() {
     }
 
     return {
+      apikey: publicAnonKey,
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     };
@@ -25,6 +26,25 @@ async function getHeaders() {
     console.error("[API] ❌ Error getting headers:", error);
     throw error;
   }
+}
+
+async function handleAuthError(response: Response, fallbackMessage: string): Promise<never> {
+  const errorData = await response.json().catch(() => ({} as any));
+  const rawMessage = errorData?.error || errorData?.message || fallbackMessage;
+  const message = String(rawMessage);
+
+  const isAuthFailure =
+    response.status === 401 ||
+    /invalid\s+jwt/i.test(message) ||
+    /unauthorized/i.test(message);
+
+  if (isAuthFailure) {
+    // Sessao ficou invalida no cliente: limpa estado para ProtectedRoute redirecionar.
+    await auth.signOut().catch(() => undefined);
+    throw new Error("SESSION_EXPIRED");
+  }
+
+  throw new Error(message || fallbackMessage);
 }
 
 export const api = {
@@ -38,8 +58,7 @@ export const api = {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to upload cover");
+      return handleAuthError(response, "Failed to upload cover");
     }
     
     const data = await response.json();
@@ -53,9 +72,7 @@ export const api = {
       const response = await fetch(`${API_URL}/books`, { headers });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to fetch books:", response.status, errorData);
-        throw new Error(errorData.error || `Failed to fetch books (${response.status})`);
+        return handleAuthError(response, `Failed to fetch books (${response.status})`);
       }
       
       const data = await response.json();
@@ -71,7 +88,7 @@ export const api = {
     const headers = await getHeaders();
     const response = await fetch(`${API_URL}/books/${id}`, { headers });
     if (!response.ok) {
-      throw new Error("Failed to fetch book");
+      return handleAuthError(response, "Failed to fetch book");
     }
     const data = await response.json();
     return data.book;
@@ -87,8 +104,7 @@ export const api = {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to create book");
+      return handleAuthError(response, "Failed to create book");
     }
     
     return response.json();
@@ -104,8 +120,7 @@ export const api = {
     });
     
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Failed to update book");
+      return handleAuthError(response, "Failed to update book");
     }
     
     return response.json();
@@ -119,7 +134,7 @@ export const api = {
       headers,
     });
     if (!response.ok) {
-      throw new Error("Failed to delete book");
+      return handleAuthError(response, "Failed to delete book");
     }
   },
 
@@ -132,9 +147,7 @@ export const api = {
       });
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to fetch stats:", response.status, errorData);
-        throw new Error(errorData.error || `Failed to fetch stats (${response.status})`);
+        return handleAuthError(response, `Failed to fetch stats (${response.status})`);
       }
       
       return response.json();
@@ -155,6 +168,12 @@ export const api = {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Failed to fetch goals:", response.status, errorData);
+
+        const errorMessage = String(errorData?.error || errorData?.message || "");
+        if (response.status === 401 || /invalid\s+jwt/i.test(errorMessage) || /unauthorized/i.test(errorMessage)) {
+          await auth.signOut().catch(() => undefined);
+          throw new Error("SESSION_EXPIRED");
+        }
         
         // If goals don't exist yet, return defaults instead of error
         if (response.status === 404 || response.status === 500) {
@@ -199,18 +218,7 @@ export const api = {
       console.log("[API setGoals] Response ok:", response.ok);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[API setGoals] ❌ Error response text:", errorText);
-        
-        let error;
-        try {
-          error = JSON.parse(errorText);
-        } catch {
-          error = { error: errorText };
-        }
-        
-        console.error("[API setGoals] ❌ Parsed error:", error);
-        throw new Error(error.error || "Failed to set goals");
+        return handleAuthError(response, "Failed to set goals");
       }
       
       const responseData = await response.json();
