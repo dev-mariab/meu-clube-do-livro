@@ -14,31 +14,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
-    checkSession();
+    let isSubscribed = true;
+    let sessionCheckTimeout: NodeJS.Timeout;
 
-    // Listen for auth changes
-    const { data: { subscription } } = auth.onAuthStateChange((currentUser) => {
-      setUser(currentUser);
-      setIsLoading(false);
+    const initializeAuth = async () => {
+      try {
+        console.log("[AuthProvider] Initializing auth...");
+
+        // First, try to get session immediately
+        const { data: { session } } = await auth.supabase.auth.getSession();
+        
+        if (isSubscribed) {
+          if (session?.user) {
+            console.log("[AuthProvider] Found existing session:", { userEmail: session.user.email });
+            setUser({
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.name,
+            });
+          } else {
+            console.log("[AuthProvider] No existing session found");
+          }
+          setIsLoading(false);
+        }
+      } catch (error) {
+        console.error("[AuthProvider] Error in getSession:", error);
+        if (isSubscribed) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    // Set up auth state change listener
+    console.log("[AuthProvider] Setting up auth listener");
+    const { data: { subscription } } = auth.supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("[AuthProvider] Auth state changed:", { event: _event, hasUser: !!session?.user });
+      
+      if (isSubscribed) {
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.name,
+          });
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+        
+        // Cancel the timeout since we got a response
+        if (sessionCheckTimeout) {
+          clearTimeout(sessionCheckTimeout);
+        }
+      }
     });
 
+    // Initialize with a timeout fallback
+    initializeAuth();
+    
+    // Fallback timeout to ensure isLoading isn't stuck forever
+    sessionCheckTimeout = setTimeout(() => {
+      if (isSubscribed) {
+        console.warn("[AuthProvider] Session check timeout, stopping loading");
+        setIsLoading(false);
+      }
+    }, 5000);
+
     return () => {
+      isSubscribed = false;
+      clearTimeout(sessionCheckTimeout);
       subscription.unsubscribe();
     };
   }, []);
-
-  const checkSession = async () => {
-    try {
-      const currentUser = await auth.getCurrentUser();
-      setUser(currentUser);
-    } catch (error) {
-      console.error("Error checking session:", error);
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleSignOut = async () => {
     try {
