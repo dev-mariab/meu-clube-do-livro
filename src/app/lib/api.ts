@@ -1,20 +1,14 @@
-import { projectId, publicAnonKey } from "../../../supabase/info";
 import { Book, ReadingStats } from "../types";
-import { auth } from "./supabase";
+import { postgresDb } from "./postgresdb";
 
-const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-93f7c220`;
-
-let refreshPromise: Promise<void> | null = null;
+// Use the postgres API URL from environment or default to localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 type Goals = { yearlyBookGoal: number | null; yearlyPageGoal: number | null };
 
-function isAuthFailureMessage(message: string): boolean {
-  return /session_expired|invalid\s+jwt|unauthorized|not authenticated/i.test(message);
-}
-
 async function getUserStorageSuffix(): Promise<string> {
-  const { data } = await auth.supabase.auth.getSession();
-  return data?.session?.user?.id || "guest";
+  const session = await postgresDb.getSession();
+  return session?.user?.id || "guest";
 }
 
 async function getBooksStorageKey(): Promise<string> {
@@ -79,127 +73,21 @@ function computeStatsFromBooks(books: Book[]): ReadingStats {
   return { booksRead, currentlyReading, pagesThisYear };
 }
 
-async function getHeaders() {
-  try {
-    // Nao faz refresh por request para evitar corrida com refresh token.
-    const { data, error } = await auth.supabase.auth.getSession();
-    if (error) {
-      throw new Error(error.message || "Not authenticated");
-    }
-
-    const session = data?.session;
-    if (!session?.access_token) {
-      throw new Error("Not authenticated");
-    }
-
-    return {
-      apikey: publicAnonKey,
-      Authorization: `Bearer ${session.access_token}`,
-      "Content-Type": "application/json",
-    };
-  } catch (error) {
-    console.error("[API] ❌ Error getting headers:", error);
-    throw error;
-  }
-}
-
-async function refreshSessionSafely(): Promise<void> {
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      const { error } = await auth.supabase.auth.refreshSession();
-      if (error) {
-        throw new Error(error.message || "Failed to refresh session");
-      }
-    })().finally(() => {
-      refreshPromise = null;
-    });
-  }
-
-  return refreshPromise;
-}
-
-async function fetchWithAuth(input: string, init: RequestInit = {}): Promise<Response> {
-  const headers = await getHeaders();
-  let response = await fetch(input, {
-    ...init,
-    headers: {
-      ...headers,
-      ...(init.headers || {}),
-    },
-  });
-
-  // Retry once on 401 to handle token propagation/expiry race right after login.
-  if (response.status === 401) {
-    try {
-      await refreshSessionSafely();
-      const retryHeaders = await getHeaders();
-      response = await fetch(input, {
-        ...init,
-        headers: {
-          ...retryHeaders,
-          ...(init.headers || {}),
-        },
-      });
-    } catch {
-      // Ignored here; handled below as auth failure.
-    }
-  }
-
-  return response;
-}
-
-async function handleAuthError(response: Response, fallbackMessage: string): Promise<never> {
-  const errorData = await response.json().catch(() => ({} as any));
-  const rawMessage = errorData?.error || errorData?.message || fallbackMessage;
-  const message = String(rawMessage);
-
-  const isAuthFailure =
-    response.status === 401 ||
-    /invalid\s+jwt/i.test(message) ||
-    /unauthorized/i.test(message);
-
-  if (isAuthFailure) {
-    throw new Error("SESSION_EXPIRED");
-  }
-
-  throw new Error(message || fallbackMessage);
-}
-
 export const api = {
-  // Upload book cover
-  async uploadCover(imageData: string, fileName: string): Promise<string> {
-    try {
-      const response = await fetchWithAuth(`${API_URL}/upload-cover`, {
-        method: "POST",
-        body: JSON.stringify({ image: imageData, fileName }),
-      });
-
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to upload cover");
-      }
-
-      const data = await response.json();
-      return data.url;
-    } catch {
-      // Fallback: usa a propria imagem em base64 quando upload remoto falhar.
-      return imageData;
-    }
+  // Upload book cover - with new backend, cover is stored as base64 in cover_url field
+  async uploadCover(imageData: string, _fileName: string): Promise<string> {
+    // Return the base64 data directly - it will be stored in the book's cover_url field
+    return imageData;
   },
 
   // Get all books
   async getBooks(): Promise<Book[]> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/books`);
-      
-      if (!response.ok) {
-        return handleAuthError(response, `Failed to fetch books (${response.status})`);
-      }
-      
-      const data = await response.json();
+      const data = await postgresDb.getBooks();
       return data.books;
     } catch (error: any) {
       console.error("Error in getBooks:", error);
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         return getLocalBooks();
       }
       throw error;
@@ -209,14 +97,10 @@ export const api = {
   // Get single book
   async getBook(id: string): Promise<Book> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/books/${id}`);
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to fetch book");
-      }
-      const data = await response.json();
+      const data = await postgresDb.getBook(id);
       return data.book;
     } catch (error: any) {
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
         const found = books.find((b) => b.id === id);
         if (!found) throw new Error("Book not found");
@@ -229,18 +113,21 @@ export const api = {
   // Create a new book
   async createBook(bookData: Omit<Book, "id" | "createdAt" | "updatedAt">): Promise<Book> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/books`, {
-        method: "POST",
-        body: JSON.stringify(bookData),
-      });
+      const payload = {
+        title: bookData.title,
+        author: bookData.author,
+        isbn: bookData.isbn,
+        category: bookData.category,
+        status: bookData.status,
+        progress: bookData.progress,
+        current_page: bookData.currentPage,
+        total_pages: bookData.totalPages,
+        cover_url: (bookData as any).coverUrl || null,
+      };
 
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to create book");
-      }
-
-      return response.json();
+      return postgresDb.createBook(payload);
     } catch (error: any) {
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
         const localBook: Book = {
           id: crypto.randomUUID(),
@@ -265,18 +152,24 @@ export const api = {
   // Update a book
   async updateBook(id: string, bookData: Partial<Book>): Promise<Book> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/books/${id}`, {
-        method: "PUT",
-        body: JSON.stringify(bookData),
-      });
-
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to update book");
+      const payload: any = {};
+      if (bookData.title) payload.title = bookData.title;
+      if (bookData.author) payload.author = bookData.author;
+      if (bookData.isbn) payload.isbn = bookData.isbn;
+      if (bookData.category) payload.category = bookData.category;
+      if (bookData.status) payload.status = bookData.status;
+      if (bookData.progress !== undefined) payload.progress = bookData.progress;
+      if (bookData.currentPage !== undefined) payload.current_page = bookData.currentPage;
+      if (bookData.totalPages !== undefined) payload.total_pages = bookData.totalPages;
+      if ((bookData as any).coverUrl !== undefined) payload.cover_url = (bookData as any).coverUrl;
+      
+      if (bookData.status === "completed") {
+        payload.completed_at = new Date().toISOString();
       }
 
-      return response.json();
+      return postgresDb.updateBook(id, payload);
     } catch (error: any) {
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
         const idx = books.findIndex((b) => b.id === id);
         if (idx < 0) throw new Error("Book not found");
@@ -296,14 +189,9 @@ export const api = {
   // Delete book
   async deleteBook(id: string): Promise<void> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/books/${id}`, {
-        method: "DELETE",
-      });
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to delete book");
-      }
+      await postgresDb.deleteBook(id);
     } catch (error: any) {
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
         await setLocalBooks(books.filter((b) => b.id !== id));
         return;
@@ -315,16 +203,10 @@ export const api = {
   // Get reading stats
   async getStats(): Promise<ReadingStats> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/stats`);
-      
-      if (!response.ok) {
-        return handleAuthError(response, `Failed to fetch stats (${response.status})`);
-      }
-      
-      return response.json();
+      return postgresDb.getStats();
     } catch (error: any) {
       console.error("Error in getStats:", error);
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
         return computeStatsFromBooks(books);
       }
@@ -335,31 +217,10 @@ export const api = {
   // Get reading goals
   async getGoals(): Promise<{ yearlyBookGoal: number | null; yearlyPageGoal: number | null }> {
     try {
-      const response = await fetchWithAuth(`${API_URL}/goals`);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Failed to fetch goals:", response.status, errorData);
-
-        const errorMessage = String(errorData?.error || errorData?.message || "");
-        if (response.status === 401 || /invalid\s+jwt/i.test(errorMessage) || /unauthorized/i.test(errorMessage)) {
-          throw new Error("SESSION_EXPIRED");
-        }
-        
-        // If goals don't exist yet, return defaults instead of error
-        if (response.status === 404 || response.status === 500) {
-          return {
-            yearlyBookGoal: null,
-            yearlyPageGoal: null,
-          };
-        }
-        throw new Error(errorData.error || `Failed to fetch goals (${response.status})`);
-      }
-      
-      return response.json();
+      return postgresDb.getGoals();
     } catch (error: any) {
       console.error("Error in getGoals:", error);
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      if (error.message?.includes("Unauthorized")) {
         return getLocalGoals();
       }
       // Return default values if there's any error
@@ -373,31 +234,12 @@ export const api = {
   // Set reading goals
   async setGoals(yearlyBookGoal: number | null, yearlyPageGoal: number | null): Promise<void> {
     try {
-      console.log("[API setGoals] ========== Setting goals ==========");
-      console.log("[API setGoals] Input:", { yearlyBookGoal, yearlyPageGoal });
-      
-      console.log("[API setGoals] Making POST request to:", `${API_URL}/goals`);
-      
-      const requestBody = { yearlyBookGoal, yearlyPageGoal };
-      console.log("[API setGoals] Request body:", requestBody);
-      
-      const response = await fetchWithAuth(`${API_URL}/goals`, {
-        method: "POST",
-        body: JSON.stringify(requestBody),
-      });
-      
-      console.log("[API setGoals] Response status:", response.status);
-      console.log("[API setGoals] Response ok:", response.ok);
-      
-      if (!response.ok) {
-        return handleAuthError(response, "Failed to set goals");
-      }
-      
-      const responseData = await response.json();
-      console.log("[API setGoals] ✅ Success! Response data:", responseData);
+      console.log("[API setGoals] Setting goals:", { yearlyBookGoal, yearlyPageGoal });
+      await postgresDb.setGoals(yearlyBookGoal, yearlyPageGoal);
+      console.log("[API setGoals] ✅ Goals set successfully");
     } catch (error: any) {
-      console.error("[API setGoals] ❌❌❌ Exception caught:", error);
-      if (isAuthFailureMessage(String(error?.message || ""))) {
+      console.error("[API setGoals] ❌ Error:", error);
+      if (error.message?.includes("Unauthorized")) {
         await setLocalGoals({ yearlyBookGoal, yearlyPageGoal });
         return;
       }

@@ -6,9 +6,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { auth } from "../lib/supabase";
+import { postgresDb } from "../lib/postgresdb";
 import { toast } from "sonner";
-import { projectId, publicAnonKey } from "../../../supabase/info";
 import girlClubImage from "figma:asset/b4f73c70509561e14c7a7104d7d022609cadadae.png";
 
 export function AuthPage() {
@@ -31,18 +30,13 @@ export function AuthPage() {
 
     try {
       console.log("[Login] Attempting sign in...");
-      const accessToken = await auth.signIn(loginData.email, loginData.password);
+      await postgresDb.login(loginData.email, loginData.password);
       
-      if (!accessToken) {
-        throw new Error("Falha ao obter token de autenticação");
-      }
-      
-      console.log("[Login] Sign in successful, token obtained");
-      console.log("[Login] Token preview:", accessToken.substring(0, 30));
+      console.log("[Login] Sign in successful");
       
       // Verify session was established
-      const session = await auth.getSession();
-      if (!session?.access_token) {
+      const session = await postgresDb.getSession();
+      if (!session?.token) {
         throw new Error("Sessão não foi estabelecida corretamente");
       }
       
@@ -85,37 +79,16 @@ export function AuthPage() {
     }
 
     try {
-      // Call server to create user
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-93f7c220/signup`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${publicAnonKey}`,
-          },
-          body: JSON.stringify({
-            email: signupData.email,
-            password: signupData.password,
-            name: signupData.name,
-          }),
-        }
+      // Create user and sign in
+      await postgresDb.signup(
+        signupData.email,
+        signupData.password,
+        signupData.name
       );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to create account");
-      }
 
       toast.success("Conta criada com sucesso! ✨");
       
-      // Auto login after signup
-      console.log("Auto-login after signup...");
-      await auth.signIn(signupData.email, signupData.password);
-      
-      // Small delay to ensure session is fully established
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // Navigate to home
       navigate("/");
     } catch (err: any) {
       console.error("Sign up error:", err);

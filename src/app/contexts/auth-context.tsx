@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { auth, AuthUser } from "../lib/supabase";
+import { postgresDb, AuthUser } from "../lib/postgresdb";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -15,30 +15,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isSubscribed = true;
-    let sessionCheckTimeout: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
         console.log("[AuthProvider] Initializing auth...");
 
-        // First, try to get session immediately
-        const { data: { session } } = await auth.supabase.auth.getSession();
+        // Get stored session
+        const session = await postgresDb.getSession();
         
         if (isSubscribed) {
           if (session?.user) {
             console.log("[AuthProvider] Found existing session:", { userEmail: session.user.email });
-            setUser({
-              id: session.user.id,
-              email: session.user.email!,
-              name: session.user.user_metadata?.name,
-            });
+            setUser(session.user);
           } else {
             console.log("[AuthProvider] No existing session found");
           }
           setIsLoading(false);
         }
       } catch (error) {
-        console.error("[AuthProvider] Error in getSession:", error);
+        console.error("[AuthProvider] Error in initialization:", error);
         if (isSubscribed) {
           setIsLoading(false);
         }
@@ -47,49 +42,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Set up auth state change listener
     console.log("[AuthProvider] Setting up auth listener");
-    const { data: { subscription } } = auth.supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("[AuthProvider] Auth state changed:", { event: _event, hasUser: !!session?.user });
+    const unsubscribe = postgresDb.onAuthStateChange((user) => {
+      console.log("[AuthProvider] Auth state changed:", { hasUser: !!user });
       
       if (isSubscribed) {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email!,
-            name: session.user.user_metadata?.name,
-          });
-        } else {
-          setUser(null);
-        }
+        setUser(user);
         setIsLoading(false);
-        
-        // Cancel the timeout since we got a response
-        if (sessionCheckTimeout) {
-          clearTimeout(sessionCheckTimeout);
-        }
       }
     });
 
-    // Initialize with a timeout fallback
+    // Initialize with first check
     initializeAuth();
     
-    // Fallback timeout to ensure isLoading isn't stuck forever
-    sessionCheckTimeout = setTimeout(() => {
-      if (isSubscribed) {
-        console.warn("[AuthProvider] Session check timeout, stopping loading");
-        setIsLoading(false);
-      }
-    }, 5000);
-
     return () => {
       isSubscribed = false;
-      clearTimeout(sessionCheckTimeout);
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
   const handleSignOut = async () => {
     try {
-      await auth.signOut();
+      postgresDb.signOut();
       setUser(null);
     } catch (error) {
       console.error("Error signing out:", error);
