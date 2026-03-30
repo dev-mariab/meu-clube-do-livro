@@ -35,16 +35,47 @@ function getStoredSession(): StoredSession | null {
   }
 }
 
+// Observers para mudanças de auth (mesmo que dentro da mesma aba)
+const authObservers: Array<(user: AuthUser | null) => void> = [];
+
 function saveSession(token: string, user: AuthUser, expiresInDays: number = 7): void {
   const expiresAt = Date.now() + expiresInDays * 24 * 60 * 60 * 1000;
   localStorage.setItem(
     "auth_session",
     JSON.stringify({ token, user, expiresAt })
   );
+  // Notifica todos os observers da mudança
+  authObservers.forEach(observer => observer(user));
 }
 
 function clearSession(): void {
   localStorage.removeItem("auth_session");
+  // Notifica todos os observers que session foi limpa
+  authObservers.forEach(observer => observer(null));
+}
+
+function subscribeToAuthChanges(callback: (user: AuthUser | null) => void): () => void {
+  authObservers.push(callback);
+  return () => {
+    const index = authObservers.indexOf(callback);
+    if (index > -1) authObservers.splice(index, 1);
+  };
+}
+
+// Transform database book format (snake_case) to frontend format (camelCase)
+function transformBook(dbBook: any) {
+  return {
+    id: dbBook.id,
+    title: dbBook.title,
+    author: dbBook.author,
+    isbn: dbBook.isbn,
+    category: dbBook.category,
+    status: dbBook.status,
+    progress: dbBook.progress,
+    coverUrl: dbBook.cover_url || "", // Convert cover_url to coverUrl
+    totalPages: dbBook.total_pages,
+    currentPage: dbBook.current_page,
+  };
 }
 
 function getAuthHeaders(): Record<string, string> {
@@ -131,7 +162,10 @@ export const postgresDb = {
     const session = getStoredSession();
     callback(session?.user || null);
 
-    // Listen to storage changes (for cross-tab sign out)
+    // Subscribe to auth changes (same tab and cross-tab)
+    const unsubscribe = subscribeToAuthChanges(callback);
+
+    // Also listen to storage changes for cross-tab updates
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === "auth_session") {
         const newSession = e.newValue ? JSON.parse(e.newValue) : null;
@@ -142,6 +176,7 @@ export const postgresDb = {
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
+      unsubscribe();
       window.removeEventListener("storage", handleStorageChange);
     };
   },
@@ -155,7 +190,8 @@ export const postgresDb = {
       throw new Error(error.error || "Failed to fetch books");
     }
 
-    return response.json();
+    const data = await response.json();
+    return data.books.map(transformBook);
   },
 
   async getBook(id: string) {
@@ -166,7 +202,8 @@ export const postgresDb = {
       throw new Error(error.error || "Failed to fetch book");
     }
 
-    return response.json();
+    const data = await response.json();
+    return transformBook(data.book);
   },
 
   async createBook(bookData: any) {
@@ -179,6 +216,9 @@ export const postgresDb = {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || "Failed to create book");
     }
+
+    const data = await response.json();
+    return transformBook(data);
 
     return response.json();
   },
@@ -194,7 +234,8 @@ export const postgresDb = {
       throw new Error(error.error || "Failed to update book");
     }
 
-    return response.json();
+    const data = await response.json();
+    return transformBook(data);
   },
 
   async deleteBook(id: string) {

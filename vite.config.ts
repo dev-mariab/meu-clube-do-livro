@@ -32,8 +32,6 @@ export default defineConfig({
     alias: {
       // Alias @ to the src directory
       '@': path.resolve(__dirname, './src'),
-      // Alias for supabase info file used by Make framework
-      '/utils/supabase/info': path.resolve(__dirname, './supabase/info'),
     },
   },
 

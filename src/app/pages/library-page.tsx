@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { BookCard } from "../components/book-card";
 import { EmptyState } from "../components/empty-state";
 import { SkeletonBookCard } from "../components/skeleton-book-card";
+import { EditBookModal, EditBookFormData } from "../components/edit-book-modal";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Book, BookStatus } from "../types";
 import { api } from "../lib/api";
@@ -17,6 +18,8 @@ export function LibraryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<BookStatus | "all">("all");
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -34,6 +37,48 @@ export function LibraryPage() {
       toast.error("Erro ao carregar biblioteca.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEditBook = (book: Book) => {
+    setEditingBook(book);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async (formData: EditBookFormData) => {
+    if (!editingBook) return;
+
+    try {
+      await api.updateBook(editingBook.id, {
+        title: formData.title,
+        author: formData.author,
+        isbn: formData.isbn,
+        category: formData.category,
+        status: formData.status,
+        progress: formData.progress,
+        current_page: formData.currentPage,
+        total_pages: formData.totalPages,
+        cover_url: formData.coverImage,
+      });
+
+      toast.success("Livro atualizado com sucesso!");
+      await loadData();
+    } catch (error: any) {
+      console.error("Error updating book:", error);
+      toast.error("Erro ao atualizar livro.");
+    }
+  };
+
+  const handleDeleteBook = async () => {
+    if (!editingBook) return;
+
+    try {
+      await api.deleteBook(editingBook.id);
+      toast.success("Livro deletado com sucesso!");
+      await loadData();
+    } catch (error: any) {
+      console.error("Error deleting book:", error);
+      toast.error("Erro ao deletar livro.");
     }
   };
 
@@ -121,10 +166,19 @@ export function LibraryPage() {
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
             {filteredBooks.map((book) => (
-              <BookCard key={book.id} book={book} />
+              <BookCard key={book.id} book={book} onEdit={handleEditBook} />
             ))}
           </div>
         )}
+
+        {/* Edit Book Modal */}
+        <EditBookModal
+          book={editingBook}
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          onSubmit={handleSaveEdit}
+          onDelete={handleDeleteBook}
+        />
       </div>
     </div>
   );
