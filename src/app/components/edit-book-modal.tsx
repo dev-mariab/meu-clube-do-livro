@@ -81,11 +81,11 @@ export function EditBookModal({
         category: book.category || "",
         status: book.status,
         progress: book.progress || 0,
-        totalPages: book.total_pages,
-        currentPage: book.current_page,
+        totalPages: book.totalPages,
+        currentPage: book.currentPage,
       });
       setCoverPreview(book.coverUrl);
-      setCoverFile(null);
+      setCoverFile(null); // Reset so new uploads are explicit
     }
   }, [book, open]);
 
@@ -122,12 +122,20 @@ export function EditBookModal({
     setIsSubmitting(true);
 
     try {
+      console.log("[EditBookModal] Submitting form", {
+        hasNewCoverFile: !!coverFile,
+        coverFileSize: coverFile?.length || 0,
+      });
+
       await onSubmit({
         ...formData,
         coverImage: coverFile || undefined,
       });
 
       onOpenChange(false);
+    } catch (error) {
+      console.error("[EditBookModal] Error submitting:", error);
+      throw error;
     } finally {
       setIsSubmitting(false);
     }

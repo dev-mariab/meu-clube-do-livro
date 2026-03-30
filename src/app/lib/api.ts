@@ -84,7 +84,7 @@ export const api = {
   async getBooks(): Promise<Book[]> {
     try {
       const data = await postgresDb.getBooks();
-      return data.books;
+      return Array.isArray(data) ? data : (data.books || []);
     } catch (error: any) {
       console.error("Error in getBooks:", error);
       if (error.message?.includes("Unauthorized")) {
@@ -98,7 +98,7 @@ export const api = {
   async getBook(id: string): Promise<Book> {
     try {
       const data = await postgresDb.getBook(id);
-      return data.book;
+      return typeof data === 'object' && data.book ? data.book : data;
     } catch (error: any) {
       if (error.message?.includes("Unauthorized")) {
         const books = await getLocalBooks();
@@ -161,7 +161,10 @@ export const api = {
       if (bookData.progress !== undefined) payload.progress = bookData.progress;
       if (bookData.currentPage !== undefined) payload.current_page = bookData.currentPage;
       if (bookData.totalPages !== undefined) payload.total_pages = bookData.totalPages;
-      if ((bookData as any).coverUrl !== undefined) payload.cover_url = (bookData as any).coverUrl;
+      if ((bookData as any).coverUrl !== undefined) {
+        payload.cover_url = (bookData as any).coverUrl;
+        console.log("[API] Updating cover_url, size:", (bookData as any).coverUrl?.length || 0);
+      }
       
       if (bookData.status === "completed") {
         payload.completed_at = new Date().toISOString();

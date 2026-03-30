@@ -49,6 +49,12 @@ export function LibraryPage() {
     if (!editingBook) return;
 
     try {
+      console.log("[LibraryPage] Saving book edit", {
+        bookId: editingBook.id,
+        hasNewCover: !!formData.coverImage,
+        coverSize: formData.coverImage?.length || 0,
+      });
+
       await api.updateBook(editingBook.id, {
         title: formData.title,
         author: formData.author,
@@ -58,13 +64,14 @@ export function LibraryPage() {
         progress: formData.progress,
         current_page: formData.currentPage,
         total_pages: formData.totalPages,
-        cover_url: formData.coverImage,
+        coverUrl: formData.coverImage,
       });
 
+      console.log("[LibraryPage] Book saved successfully");
       toast.success("Livro atualizado com sucesso!");
       await loadData();
     } catch (error: any) {
-      console.error("Error updating book:", error);
+      console.error("[LibraryPage] Error updating book:", error);
       toast.error("Erro ao atualizar livro.");
     }
   };
