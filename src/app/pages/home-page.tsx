@@ -100,16 +100,24 @@ export function HomePage() {
 
   const readingBooks = books.filter((b) => b.status === "reading");
   const recentBooks = books.slice(0, 6);
+  
+  // Calculate progress percentages for goals
+  const bookProgress = goals.yearlyBookGoal 
+    ? Math.min(Math.round((stats.booksRead / goals.yearlyBookGoal) * 100), 100)
+    : undefined;
+  const pageProgress = goals.yearlyPageGoal
+    ? Math.min(Math.round((stats.pagesThisYear / goals.yearlyPageGoal) * 100), 100)
+    : undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-pink-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-pink-200 px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-pink-200 dark:border-slate-700 px-4 sm:px-6 lg:px-8 py-4 sm:py-6 transition-colors">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-400 dark:to-purple-400 bg-clip-text text-transparent">
             Início
           </h1>
-          <p className="text-xs sm:text-sm text-pink-700/80 mt-1">
+          <p className="text-xs sm:text-sm text-pink-700/80 dark:text-slate-400 mt-1">
             Bem-vinda de volta! ✨ Aqui está um resumo da sua biblioteca.
           </p>
         </div>
@@ -120,11 +128,11 @@ export function HomePage() {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-white p-4 sm:p-6 rounded-lg border border-gray-200">
+              <div key={i} className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-lg border border-gray-200 dark:border-slate-700">
                 <div className="animate-pulse space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2"></div>
+                  <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-1/3"></div>
+                  <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-2/3"></div>
                 </div>
               </div>
             ))}
@@ -141,15 +149,19 @@ export function HomePage() {
               icon={BookMarked}
               description={
                 goals.yearlyBookGoal
-                  ? `Meta: ${goals.yearlyBookGoal} livros`
+                  ? `De ${goals.yearlyBookGoal} livros`
                   : "Total de livros concluídos"
               }
+              progress={bookProgress}
+              progressLabel="Meta de livros"
             />
             <StatsCard
               title="Lendo Agora"
               value={stats.currentlyReading}
               icon={BookOpen}
               description="Livros em progresso"
+              progress={readingBooks.length > 0 ? Math.round((readingBooks.reduce((sum, b) => sum + (b.progress || 0), 0)) / readingBooks.length) : 0}
+              progressLabel="Progresso médio"
             />
             <StatsCard
               title="Páginas este Ano"
@@ -157,9 +169,11 @@ export function HomePage() {
               icon={FileText}
               description={
                 goals.yearlyPageGoal
-                  ? `Meta: ${goals.yearlyPageGoal.toLocaleString()} páginas`
+                  ? `De ${goals.yearlyPageGoal.toLocaleString()} páginas`
                   : "Total de páginas lidas"
               }
+              progress={pageProgress}
+              progressLabel="Meta de páginas"
             />
           </motion.div>
         )}
@@ -172,7 +186,7 @@ export function HomePage() {
             transition={{ delay: 0.1 }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900">Lendo Agora</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">Lendo Agora</h2>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
               {readingBooks.map((book) => (
@@ -185,14 +199,14 @@ export function HomePage() {
         {/* Recent Books Section */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
               {isLoading ? "Carregando..." : "Biblioteca Recente"}
             </h2>
             {!isLoading && books.length > 0 && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-xs sm:text-sm"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950 text-xs sm:text-sm"
               >
                 Ver todos
               </Button>
