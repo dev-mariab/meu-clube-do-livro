@@ -43,8 +43,6 @@ const apiPrefix = "/make-server-93f7c220";
 
 // Auth routes (public + some protected)
 app.use(`${apiPrefix}/auth`, authRoutes);
-app.post(`${apiPrefix}/signup`, (req, res) => authRoutes.stack[0].handle(req, res));
-app.post(`${apiPrefix}/login`, (req, res) => authRoutes.stack[1].handle(req, res));
 
 // Alternative login endpoint for compatibility
 app.post(`${apiPrefix}/login-user`, async (req, res) => {

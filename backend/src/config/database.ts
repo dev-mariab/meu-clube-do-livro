@@ -1,9 +1,7 @@
-import pg from "pg";
+import { Pool } from "pg";
 import dotenv from "dotenv";
 
 dotenv.config();
-
-const { Pool } = pg;
 
 const pool = new Pool({
   connectionString:
@@ -11,7 +9,7 @@ const pool = new Pool({
     `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`,
 });
 
-pool.on("error", (err) => {
+pool.on("error", (err: Error) => {
   console.error("[DB] Unexpected error on idle client", err);
 });
 

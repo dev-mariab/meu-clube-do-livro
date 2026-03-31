@@ -1,0 +1,9 @@
+{
+  "build": {
+    "builder": "nixpacks"
+  },
+  "deploy": {
+    "restartPolicyMaxRetries": 10,
+    "restartPolicyWindowMs": 60000
+  }
+}
