@@ -13,7 +13,7 @@ export class ReadingGoalModel {
   static async findByUserId(userId: string): Promise<ReadingGoal | null> {
     const result = await pool.query(
       "SELECT * FROM reading_goals WHERE user_id = $1",
-      [userId]
+      [userId] as any
     );
     return result.rows[0] || null;
   }
@@ -29,7 +29,7 @@ export class ReadingGoalModel {
        ON CONFLICT (user_id) 
        DO UPDATE SET yearly_book_goal = $2, yearly_page_goal = $3, updated_at = CURRENT_TIMESTAMP
        RETURNING *`,
-      [userId, yearlyBookGoal, yearlyPageGoal]
+      [userId, yearlyBookGoal, yearlyPageGoal] as any
     );
 
     return result.rows[0];

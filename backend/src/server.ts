@@ -44,15 +44,8 @@ const apiPrefix = "/make-server-93f7c220";
 // Auth routes (public + some protected)
 app.use(`${apiPrefix}/auth`, authRoutes);
 
-// Alternative login endpoint for compatibility
-app.post(`${apiPrefix}/login-user`, async (req, res) => {
-  // Redirect to login endpoint
-  authRoutes.stack[1].handle(req, res);
-});
-
 // Books routes (all protected)
 app.use(`${apiPrefix}/books`, booksRoutes);
-app.get(`${apiPrefix}/stats`, authMiddleware, booksRoutes.stack[2].handle);
 
 // Goals routes (all protected)
 app.use(`${apiPrefix}/goals`, goalsRoutes);

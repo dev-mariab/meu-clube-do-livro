@@ -21,13 +21,13 @@ export class BookModel {
   static async findByUserId(userId: string): Promise<Book[]> {
     const result = await pool.query(
       "SELECT * FROM books WHERE user_id = $1 ORDER BY created_at DESC",
-      [userId]
+      [userId] as any
     );
     return result.rows;
   }
 
   static async findById(id: string): Promise<Book | null> {
-    const result = await pool.query("SELECT * FROM books WHERE id = $1", [id]);
+    const result = await pool.query("SELECT * FROM books WHERE id = $1", [id] as any);
     return result.rows[0] || null;
   }
 
@@ -63,7 +63,7 @@ export class BookModel {
         total_pages,
         cover_url,
         completed_at,
-      ]
+      ] as any
     );
 
     return result.rows[0];
@@ -101,12 +101,12 @@ export class BookModel {
     values.push(id); // For WHERE clause
     const query = `UPDATE books SET ${fields.join(", ")}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount} RETURNING *`;
 
-    const result = await pool.query(query, values);
+    const result = await pool.query(query, values as any);
     return result.rows[0];
   }
 
   static async delete(id: string): Promise<void> {
-    await pool.query("DELETE FROM books WHERE id = $1", [id]);
+    await pool.query("DELETE FROM books WHERE id = $1", [id] as any);
   }
 
   static async getStatsByUserId(
@@ -121,7 +121,7 @@ export class BookModel {
         COALESCE(SUM(CASE WHEN status = 'completed' AND EXTRACT(YEAR FROM completed_at) = $2 THEN total_pages ELSE 0 END), 0) as pages_this_year
        FROM books 
        WHERE user_id = $1`,
-      [userId, currentYear]
+      [userId, currentYear] as any
     );
 
     const row = result.rows[0];
