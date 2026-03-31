@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc --skipLibCheck",
     "start": "tsx src/server.ts",
     "migrate": "tsx src/db/migrations.ts"
   },
