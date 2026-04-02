@@ -3,6 +3,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { initializeDatabase, runMigrations } from "./config/database.js";
 import { authMiddleware } from "./middleware/auth.js";
+import { AuthController } from "./controllers/AuthController.js";
+import { BooksController } from "./controllers/BooksController.js";
+import { GoalsController } from "./controllers/GoalsController.js";
 import authRoutes from "./routes/auth.js";
 import booksRoutes from "./routes/books.js";
 import goalsRoutes from "./routes/goals.js";
@@ -50,16 +53,15 @@ app.use(`${apiPrefix}/books`, booksRoutes);
 // Goals routes (all protected)
 app.use(`${apiPrefix}/goals`, goalsRoutes);
 
-// Handle signup endpoint with different method
-app.post(`${apiPrefix}/login`, async (req, res) => {
-  const { AuthController } = await import("./controllers/AuthController.js");
-  AuthController.login(req, res);
-});
+// Alias routes para compatibilidade com frontend
+// Frontend chama /stats e /goals diretamente, não via /books/stats
+app.get(`${apiPrefix}/stats`, authMiddleware, (req, res) => BooksController.getStats(req, res));
+app.get(`${apiPrefix}/goals`, authMiddleware, (req, res) => GoalsController.getGoals(req, res));
+app.post(`${apiPrefix}/goals`, authMiddleware, (req, res) => GoalsController.setGoals(req, res));
 
-app.post(`${apiPrefix}/signup`, async (req, res) => {
-  const { AuthController } = await import("./controllers/AuthController.js");
-  AuthController.signup(req, res);
-});
+// Handle login/signup endpoints with different routes for compatibility
+app.post(`${apiPrefix}/login`, (req, res) => AuthController.login(req, res));
+app.post(`${apiPrefix}/signup`, (req, res) => AuthController.signup(req, res));
 
 // Initialize database and start server
 async function start() {
