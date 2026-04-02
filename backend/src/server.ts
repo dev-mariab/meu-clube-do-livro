@@ -14,12 +14,23 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const CORS_ORIGIN = (process.env.CORS_ORIGIN || "http://localhost:5173").split(",");
+
+// CORS dinâmico - aceita localhost, *.vercel.app, e URLs do .env
+function corsOrigin(origin: string | undefined): boolean {
+  if (!origin) return true; // Mobile apps e desktop
+  
+  const allowedPatterns = [
+    /^http:\/\/localhost(:\d+)?$/,
+    /\.vercel\.app$/,
+  ];
+  
+  return allowedPatterns.some((pattern) => pattern.test(origin));
+}
 
 // Middleware
 app.use(
   cors({
-    origin: CORS_ORIGIN,
+    origin: corsOrigin,
     credentials: true,
   })
 );
