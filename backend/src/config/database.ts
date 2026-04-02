@@ -5,12 +5,21 @@ dotenv.config();
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("❌ DATABASE_URL environment variable is not set!");
+// Para Railway: tenta DATABASE_URL, se não tiver, monta a partir das variáveis individuais
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_HOST && process.env.DB_PORT && process.env.DB_NAME
+    ? `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+    : undefined);
+
+if (!databaseUrl) {
+  throw new Error(
+    "❌ DATABASE_URL environment variable is not set! Also tried to build from individual DB_* variables."
+  );
 }
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
 });
 
 pool.on("error", (err: Error) => {
