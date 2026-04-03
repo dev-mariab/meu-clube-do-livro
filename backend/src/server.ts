@@ -15,16 +15,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS dinâmico - aceita localhost, *.vercel.app, e URLs do .env
+// CORS dinâmico - aceita localhost, *.vercel.app, Railway, e 127.0.0.1
 function corsOrigin(origin: string | undefined): boolean {
-  if (!origin) return true; // Mobile apps e desktop
+  if (!origin) return true; // Mobile apps e desktop, requests sem origin header
   
   const allowedPatterns = [
-    /^http:\/\/localhost(:\d+)?$/,
-    /\.vercel\.app$/,
+    /^http:\/\/localhost(:\d+)?$/,          // localhost
+    /^http:\/\/127\.0\.0\.1(:\d+)?$/,       // 127.0.0.1
+    /\.vercel\.app$/,                        // *.vercel.app
+    /\.railway\.app$/,                       // *.railway.app (próprio domínio)
   ];
   
-  return allowedPatterns.some((pattern) => pattern.test(origin));
+  const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
+  console.log(`[CORS] Origin: ${origin}, Allowed: ${isAllowed}`);
+  return isAllowed;
 }
 
 // Middleware
@@ -32,6 +36,9 @@ app.use(
   cors({
     origin: corsOrigin,
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200,
   })
 );
 app.use(express.json({ limit: "50mb" }));

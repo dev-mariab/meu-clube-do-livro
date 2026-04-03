@@ -49,15 +49,19 @@ export class AuthController {
       const { email, password } = req.body;
 
       if (!email || !password) {
+        console.log("[AuthController] Missing email or password");
         res
           .status(400)
           .json({ error: "Email and password are required" });
         return;
       }
 
+      console.log(`[AuthController] Login attempt for: ${email}`);
+
       // Find user
       const user = await UserModel.findByEmail(email);
       if (!user) {
+        console.log(`[AuthController] User not found: ${email}`);
         res.status(401).json({ error: "Invalid login credentials" });
         return;
       }
@@ -65,18 +69,22 @@ export class AuthController {
       // Verify password
       const passwordHash = await UserModel.getPasswordHash(email);
       if (!passwordHash) {
+        console.log(`[AuthController] No password hash for: ${email}`);
         res.status(401).json({ error: "Invalid login credentials" });
         return;
       }
 
       const isValid = await UserModel.verifyPassword(password, passwordHash);
       if (!isValid) {
+        console.log(`[AuthController] Invalid password for: ${email}`);
         res.status(401).json({ error: "Invalid login credentials" });
         return;
       }
 
       // Generate token
       const token = generateToken(user.id, user.email);
+
+      console.log(`[AuthController] Login successful for: ${email}`);
 
       res.json({
         user: {

@@ -101,7 +101,8 @@ function getAuthHeaders(): Record<string, string> {
 
 async function fetchApi(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retries: number = 3
 ): Promise<Response> {
   const url = `${API_URL}${API_PREFIX}${endpoint}`;
   const headers = {
@@ -109,18 +110,41 @@ async function fetchApi(
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  let lastError: any;
+  
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      console.log(`[API] Calling ${url} (attempt ${attempt}/${retries})`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
 
-  // Handle 401 - token expired/invalid
-  if (response.status === 401) {
-    clearSession();
-    // Window location will be handled by AuthContext
+      clearTimeout(timeoutId);
+
+      // Handle 401 - token expired/invalid
+      if (response.status === 401) {
+        clearSession();
+      }
+
+      return response;
+    } catch (error) {
+      lastError = error;
+      console.error(`[API] Attempt ${attempt} failed:`, error);
+      
+      if (attempt < retries) {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
+    }
   }
-
-  return response;
+  
+  throw lastError || new Error('Max retries exceeded');
 }
 
 export const postgresDb = {
