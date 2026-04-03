@@ -102,7 +102,7 @@ function getAuthHeaders(): Record<string, string> {
 async function fetchApi(
   endpoint: string,
   options: RequestInit = {},
-  retries: number = 3
+  retries: number = 1
 ): Promise<Response> {
   const url = `${API_URL}${API_PREFIX}${endpoint}`;
   const headers = {
@@ -117,7 +117,10 @@ async function fetchApi(
       console.log(`[API] Calling ${url} (attempt ${attempt}/${retries})`);
       
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+      const timeoutId = setTimeout(() => {
+        console.error(`[API] Timeout after 30s - aborting request to ${url}`);
+        controller.abort();
+      }, 30000); // 30s timeout
       
       const response = await fetch(url, {
         ...options,
@@ -127,15 +130,21 @@ async function fetchApi(
 
       clearTimeout(timeoutId);
 
+      console.log(`[API] Response status: ${response.status}`);
+
       // Handle 401 - token expired/invalid
       if (response.status === 401) {
         clearSession();
       }
 
       return response;
-    } catch (error) {
+    } catch (error: any) {
       lastError = error;
-      console.error(`[API] Attempt ${attempt} failed:`, error);
+      console.error(`[API] Attempt ${attempt} failed:`, error.message, error.name);
+      
+      if (error.name === 'AbortError') {
+        throw new Error(`Requisição expirou. O servidor demorou muito para responder.`);
+      }
       
       if (attempt < retries) {
         // Wait before retrying
@@ -144,7 +153,7 @@ async function fetchApi(
     }
   }
   
-  throw lastError || new Error('Max retries exceeded');
+  throw lastError || new Error('Falha ao conectar com o servidor');
 }
 
 export const postgresDb = {
