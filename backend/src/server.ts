@@ -91,7 +91,7 @@ async function start() {
         `[Server] API prefix: ${apiPrefix}`
       );
       console.log(
-        `[Server] CORS enabled for: ${CORS_ORIGIN}`
+        `[Server] CORS enabled for: localhost, *.vercel.app`
       );
     });
   } catch (error) {
