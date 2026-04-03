@@ -1,12 +1,53 @@
-import { User, Bell, Shield, Palette, Database } from "lucide-react";
+import { useState, useEffect } from "react";
+import { User, Bell, Shield, Palette, Database, Loader2 } from "lucide-react";
 import { Card } from "../components/ui/card";
 import { Label } from "../components/ui/label";
 import { Input } from "../components/ui/input";
 import { Switch } from "../components/ui/switch";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
+import { useAuth } from "../contexts/auth-context";
+import { api } from "../lib/api";
+import { toast } from "sonner";
 
 export function SettingsPage() {
+  const { user } = useAuth();
+  const [name, setName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanged, setHasChanged] = useState(false);
+
+  useEffect(() => {
+    if (user?.name) {
+      setName(user.name);
+      setHasChanged(false);
+    }
+  }, [user]);
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setName(newValue);
+    setHasChanged(newValue !== user?.name);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!name.trim()) {
+      toast.error("O nome não pode estar vazio");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await api.updateProfile(name);
+      toast.success("Perfil atualizado com sucesso!");
+      setHasChanged(false);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error("Erro ao atualizar perfil");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#fafafa]">
       {/* Header */}
@@ -29,19 +70,30 @@ export function SettingsPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-xs sm:text-sm">Nome</Label>
-              <Input id="name" defaultValue="Usuário" className="bg-white border-gray-300 h-10 sm:h-11 text-sm sm:text-base" />
+              <Input 
+                id="name"
+                value={name}
+                onChange={handleNameChange}
+                className="bg-white border-gray-300 h-10 sm:h-11 text-sm sm:text-base" 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="email" className="text-xs sm:text-sm">Email</Label>
               <Input
                 id="email"
                 type="email"
-                defaultValue="usuario@email.com"
-                className="bg-white border-gray-300 h-10 sm:h-11 text-sm sm:text-base"
+                value={user?.email || ""}
+                disabled
+                className="bg-gray-100 border-gray-300 h-10 sm:h-11 text-sm sm:text-base text-gray-600"
               />
             </div>
-            <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base">
-              Salvar Alterações
+            <Button 
+              onClick={handleSaveProfile}
+              disabled={isSaving || !hasChanged}
+              className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {isSaving ? "Salvando..." : "Salvar Alterações"}
             </Button>
           </div>
         </Card>

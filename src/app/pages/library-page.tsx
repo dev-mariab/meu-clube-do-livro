@@ -62,9 +62,11 @@ export function LibraryPage() {
         category: formData.category,
         status: formData.status,
         progress: formData.progress,
-        current_page: formData.currentPage,
-        total_pages: formData.totalPages,
+        currentPage: formData.currentPage,
+        totalPages: formData.totalPages,
         coverUrl: formData.coverImage,
+        rating: formData.rating,
+        review: formData.review,
       });
 
       console.log("[LibraryPage] Book saved successfully");

@@ -29,6 +29,8 @@ export interface BookFormData {
   totalPages?: number;
   currentPage?: number;
   coverImage?: string;
+  rating?: number;
+  review?: string;
 }
 
 interface AddBookModalProps {
@@ -50,6 +52,8 @@ export function AddBookModal({ open, onOpenChange, onSubmit }: AddBookModalProps
     progress: 0,
     totalPages: undefined,
     currentPage: undefined,
+    rating: undefined,
+    review: undefined,
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,6 +107,8 @@ export function AddBookModal({ open, onOpenChange, onSubmit }: AddBookModalProps
         progress: 0,
         totalPages: undefined,
         currentPage: undefined,
+        rating: undefined,
+        review: undefined,
       });
       setCoverPreview(null);
       setCoverFile(null);

@@ -39,6 +39,8 @@ export interface EditBookFormData {
   totalPages?: number;
   currentPage?: number;
   coverImage?: string;
+  rating?: number;
+  review?: string;
 }
 
 interface EditBookModalProps {
@@ -70,6 +72,8 @@ export function EditBookModal({
     progress: 0,
     totalPages: undefined,
     currentPage: undefined,
+    rating: undefined,
+    review: undefined,
   });
 
   useEffect(() => {
@@ -83,6 +87,8 @@ export function EditBookModal({
         progress: book.progress || 0,
         totalPages: book.totalPages,
         currentPage: book.currentPage,
+        rating: book.rating,
+        review: book.review,
       });
       setCoverPreview(book.coverUrl);
       setCoverFile(null); // Reset so new uploads are explicit
@@ -323,6 +329,44 @@ export function EditBookModal({
                 />
               </div>
             )}
+
+            {/* Rating (only for completed books) */}
+            {formData.status === "completed" && (
+              <div className="space-y-2">
+                <Label htmlFor="rating">Avaliação (1-5 estrelas)</Label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, rating: star })}
+                      className={`text-2xl transition-all ${
+                        (formData.rating || 0) >= star
+                          ? "text-yellow-400"
+                          : "text-gray-300 hover:text-yellow-200"
+                      }`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Review */}
+            <div className="space-y-2">
+              <Label htmlFor="review">Crítica/Avaliação (Opcional)</Label>
+              <textarea
+                id="review"
+                value={formData.review || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, review: e.target.value })
+                }
+                placeholder="Compartilhe seus pensamentos sobre o livro..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500 resize-none"
+                rows={4}
+              />
+            </div>
 
             <div className="flex gap-2">
               <Button

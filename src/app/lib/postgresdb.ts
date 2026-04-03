@@ -48,6 +48,13 @@ function saveSession(token: string, user: AuthUser, expiresInDays: number = 7): 
   authObservers.forEach(observer => observer(user));
 }
 
+function updateUserInSession(user: AuthUser): void {
+  const session = getStoredSession();
+  if (session) {
+    saveSession(session.token, user, 7);
+  }
+}
+
 function clearSession(): void {
   localStorage.removeItem("auth_session");
   // Notifica todos os observers que session foi limpa
@@ -75,6 +82,8 @@ function transformBook(dbBook: any) {
     coverUrl: dbBook.cover_url || "", // Convert cover_url to coverUrl
     totalPages: dbBook.total_pages,
     currentPage: dbBook.current_page,
+    rating: dbBook.rating,
+    review: dbBook.review,
   };
 }
 
@@ -295,6 +304,23 @@ export const postgresDb = {
     // Imagens serão salvas como base64 direto no campo cover_url do banco
     // Quando enviadas no createBook/updateBook
     throw new Error("Use cover_url field directly in book data");
+  },
+
+  async updateProfile(name: string): Promise<AuthUser> {
+    const response = await fetchApi("/me", {
+      method: "PUT",
+      body: JSON.stringify({ name }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.error || "Failed to update profile");
+    }
+
+    const data = await response.json() as AuthUser;
+    // Atualizar a sessão com o novo usuário
+    updateUserInSession(data);
+    return data;
   },
 };
 

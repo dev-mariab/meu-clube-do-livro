@@ -59,6 +59,8 @@ export class BooksController {
         current_page,
         total_pages,
         cover_url,
+        rating,
+        review,
       } = req.body;
 
       if (!title) {
@@ -77,6 +79,8 @@ export class BooksController {
         current_page: current_page || 0,
         total_pages: total_pages || 0,
         cover_url,
+        rating,
+        review,
         completed_at:
           status === "completed" ? new Date() : undefined,
       };

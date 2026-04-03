@@ -53,4 +53,12 @@ export class UserModel {
   ): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
+
+  static async updateName(id: string, name: string): Promise<User | null> {
+    const result = await pool.query(
+      "UPDATE users SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING id, email, name, created_at, updated_at",
+      [name, id]
+    );
+    return result.rows[0] || null;
+  }
 }

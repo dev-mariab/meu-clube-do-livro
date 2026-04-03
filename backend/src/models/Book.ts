@@ -12,6 +12,8 @@ export interface Book {
   current_page: number;
   total_pages: number;
   cover_url?: string;
+  rating?: number; // 1-5 stars
+  review?: string; // Text review/critique
   completed_at?: Date;
   created_at: Date;
   updated_at: Date;
@@ -44,12 +46,14 @@ export class BookModel {
       total_pages,
       cover_url,
       completed_at,
+      rating,
+      review,
     } = bookData;
 
     const result = await pool.query(
       `INSERT INTO books 
-       (user_id, title, author, isbn, category, status, progress, current_page, total_pages, cover_url, completed_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+       (user_id, title, author, isbn, category, status, progress, current_page, total_pages, cover_url, completed_at, rating, review) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) 
        RETURNING *`,
       [
         user_id,
@@ -63,6 +67,8 @@ export class BookModel {
         total_pages,
         cover_url,
         completed_at,
+        rating,
+        review,
       ] as any
     );
 
@@ -81,6 +87,8 @@ export class BookModel {
       "total_pages",
       "cover_url",
       "completed_at",
+      "rating",
+      "review",
     ];
 
     const fields: string[] = [];
@@ -118,7 +126,11 @@ export class BookModel {
       `SELECT 
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as books_read,
         COUNT(CASE WHEN status = 'reading' THEN 1 END) as currently_reading,
-        COALESCE(SUM(CASE WHEN status = 'completed' AND EXTRACT(YEAR FROM completed_at) = $2 THEN total_pages ELSE 0 END), 0) as pages_this_year
+        COALESCE(
+          SUM(CASE WHEN status = 'completed' AND EXTRACT(YEAR FROM completed_at) = $2 THEN total_pages ELSE 0 END) +
+          SUM(CASE WHEN status = 'reading' THEN current_page ELSE 0 END),
+          0
+        ) as pages_this_year
        FROM books 
        WHERE user_id = $1`,
       [userId, currentYear] as any

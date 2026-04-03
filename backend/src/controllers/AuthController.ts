@@ -115,4 +115,36 @@ export class AuthController {
       res.status(500).json({ error: "Failed to fetch user" });
     }
   }
+
+  static async updateProfile(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.user) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      const { name } = req.body;
+
+      if (!name || name.trim() === "") {
+        res.status(400).json({ error: "Name is required" });
+        return;
+      }
+
+      const updatedUser = await UserModel.updateName(req.user.userId, name);
+
+      if (!updatedUser) {
+        res.status(404).json({ error: "User not found" });
+        return;
+      }
+
+      res.json({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+      });
+    } catch (error) {
+      console.error("[AuthController] Update profile error:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  }
 }

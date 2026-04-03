@@ -62,13 +62,23 @@ function computeStatsFromBooks(books: Book[]): ReadingStats {
   const currentlyReading = books.filter((b) => b.status === "reading").length;
   const currentYear = new Date().getFullYear();
 
-  const pagesThisYear = books
-    .filter((b) => {
+  // Contar páginas lidas: 
+  // - Para livros completados este ano: total de páginas
+  // - Para livros em leitura: páginas já lidas (currentPage)
+  const pagesThisYear = books.reduce((sum, b) => {
+    // Livros completados neste ano contam todas as páginas
+    if (b.status === "completed") {
       const completedAt = (b as any).completedAt as string | undefined;
-      if (!completedAt || b.status !== "completed") return false;
-      return new Date(completedAt).getFullYear() === currentYear;
-    })
-    .reduce((sum, b) => sum + (b.totalPages || 0), 0);
+      if (completedAt && new Date(completedAt).getFullYear() === currentYear) {
+        return sum + (b.totalPages || 0);
+      }
+    }
+    // Livros em leitura contam apenas as páginas já lidas
+    if (b.status === "reading" && b.currentPage) {
+      return sum + b.currentPage;
+    }
+    return sum;
+  }, 0);
 
   return { booksRead, currentlyReading, pagesThisYear };
 }
@@ -161,6 +171,8 @@ export const api = {
       if (bookData.progress !== undefined) payload.progress = bookData.progress;
       if (bookData.currentPage !== undefined) payload.current_page = bookData.currentPage;
       if (bookData.totalPages !== undefined) payload.total_pages = bookData.totalPages;
+      if (bookData.rating !== undefined) payload.rating = bookData.rating;
+      if (bookData.review !== undefined) payload.review = bookData.review;
       if ((bookData as any).coverUrl !== undefined) {
         payload.cover_url = (bookData as any).coverUrl;
         console.log("[API] Updating cover_url, size:", (bookData as any).coverUrl?.length || 0);
@@ -246,6 +258,16 @@ export const api = {
         await setLocalGoals({ yearlyBookGoal, yearlyPageGoal });
         return;
       }
+      throw error;
+    }
+  },
+
+  // Update user profile
+  async updateProfile(name: string): Promise<{ id: string; email: string; name: string }> {
+    try {
+      return await postgresDb.updateProfile(name);
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
       throw error;
     }
   },

@@ -11,6 +11,8 @@ export interface Book {
   coverUrl: string;
   totalPages?: number;
   currentPage?: number;
+  rating?: number; // 1-5 stars
+  review?: string; // Text review/critique
 }
 
 export interface ReadingStats {
