@@ -1,8 +1,11 @@
 import { Book, ReadingStats } from "../types";
 import { postgresDb } from "./postgresdb";
 
-// Use the postgres API URL from environment or default to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+// Detectar ambiente e usar URL correta
+const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_BASE_URL = isDevelopment
+  ? (import.meta.env.VITE_API_URL || "http://localhost:3000")
+  : "https://meu-clube-do-livro-production.up.railway.app";
 
 type Goals = { yearlyBookGoal: number | null; yearlyPageGoal: number | null };
 

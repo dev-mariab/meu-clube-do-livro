@@ -13,7 +13,11 @@ interface StoredSession {
   expiresAt: number;
 }
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+// Detectar ambiente
+const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const API_URL = isDevelopment 
+  ? (import.meta.env.VITE_API_URL || "http://localhost:3001")
+  : "https://meu-clube-do-livro-production.up.railway.app";
 const API_PREFIX = "/make-server-93f7c220";
 
 function getStoredSession(): StoredSession | null {
