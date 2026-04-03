@@ -5,16 +5,35 @@ dotenv.config();
 
 const { Pool } = pg;
 
-// Para Railway: tenta DATABASE_URL, se não tiver, monta a partir das variáveis individuais
+// Para Railway: tenta DATABASE_URL, depois Railway POSTGRES_* vars, depois vars individuais
 const databaseUrl =
   process.env.DATABASE_URL ||
-  (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_HOST && process.env.DB_PORT && process.env.DB_NAME
-    ? `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
-    : undefined);
+  (process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD && process.env.POSTGRES_HOST && process.env.POSTGRES_PORT && process.env.POSTGRES_DB
+    ? `postgresql://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/${process.env.POSTGRES_DB}`
+    : (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_HOST && process.env.DB_PORT && process.env.DB_NAME
+      ? `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+      : undefined));
 
 if (!databaseUrl) {
+  console.error("[DB] ❌ No database URL found!");
+  console.error("[DB] Checked for:");
+  console.error("[DB]   - DATABASE_URL env var:", !!process.env.DATABASE_URL);
+  console.error("[DB]   - POSTGRES_* vars (Railway):", {
+    host: !!process.env.POSTGRES_HOST,
+    port: !!process.env.POSTGRES_PORT,
+    user: !!process.env.POSTGRES_USER,
+    password: !!process.env.POSTGRES_PASSWORD,
+    db: !!process.env.POSTGRES_DB,
+  });
+  console.error("[DB]   - DB_* vars (legacy):", {
+    host: !!process.env.DB_HOST,
+    port: !!process.env.DB_PORT,
+    user: !!process.env.DB_USER,
+    password: !!process.env.DB_PASSWORD,
+    name: !!process.env.DB_NAME,
+  });
   throw new Error(
-    "❌ DATABASE_URL environment variable is not set! Also tried to build from individual DB_* variables."
+    "❌ DATABASE_URL environment variable is not set! Also tried POSTGRES_* (Railway) and DB_* (legacy) variables."
   );
 }
 
