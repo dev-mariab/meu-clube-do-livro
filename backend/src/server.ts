@@ -107,6 +107,8 @@ async function start() {
   }
 }
 
-start();
+start().catch((error) => {
+  console.error("[Server] ❌ Unhandled error during server startup:", error);
+});
 
 export default app;
