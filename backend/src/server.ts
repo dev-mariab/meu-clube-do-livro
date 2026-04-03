@@ -22,8 +22,8 @@ function corsOrigin(origin: string | undefined): boolean {
   const allowedPatterns = [
     /^http:\/\/localhost(:\d+)?$/,          // localhost
     /^http:\/\/127\.0\.0\.1(:\d+)?$/,       // 127.0.0.1
-    /\.vercel\.app$/,                        // *.vercel.app
-    /\.railway\.app$/,                       // *.railway.app (próprio domínio)
+    /vercel\.app$/,                          // *.vercel.app
+    /railway\.app$/,                         // *.railway.app (inclui .up.railway.app)
   ];
   
   const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
