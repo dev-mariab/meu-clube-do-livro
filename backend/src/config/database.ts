@@ -1,6 +1,5 @@
 import pg from "pg";
 import dotenv from "dotenv";
-
 dotenv.config();
 
 const { Pool } = pg;
@@ -38,9 +37,9 @@ if (!databaseUrl) {
   );
 }
 
-const pool = new Pool({
-  connectionString: databaseUrl,
-});
+const pool = new Pool({ connectionString: databaseUrl });
+
+export { pool };
 
 pool.on("error", (err: Error) => {
   console.error("[DB] Unexpected error on idle client", err);
@@ -128,5 +127,3 @@ export async function runMigrations() {
     client.release();
   }
 }
-
-export default pool;
