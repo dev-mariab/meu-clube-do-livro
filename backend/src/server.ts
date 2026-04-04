@@ -49,18 +49,8 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
-// Test route
-app.get("/make-server-93f7c220/test", (req, res) => {
-  res.json({
-    success: true,
-    message: "Server is working!",
-    hasAuthHeader: !!req.headers.authorization,
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // API Routes
-const apiPrefix = "/make-server-93f7c220";
+const apiPrefix = "";
 
 // Auth routes (public + some protected)
 app.use(`${apiPrefix}/auth`, authRoutes);
