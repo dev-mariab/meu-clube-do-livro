@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { initializeDatabase, runMigrations } from "./config/database.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { AuthController } from "./controllers/AuthController.js";
@@ -9,7 +10,17 @@ import { GoalsController } from "./controllers/GoalsController.js";
 import authRoutes from "./routes/auth.js";
 import booksRoutes from "./routes/books.js";
 import goalsRoutes from "./routes/goals.js";
-dotenv.config();
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+// Substitui __dirname para compatibilidade com ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+// Carrega o arquivo .env explicitamente
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+// Log para verificar o caminho do arquivo .env
+console.log("Caminho do arquivo .env:", path.resolve(__dirname, "../.env"));
+// Log para verificar se as variáveis de ambiente estão sendo carregadas
+console.log("Variáveis de ambiente carregadas:", process.env);
 const app = express();
 const PORT = process.env.PORT || 3000;
 // CORS dinâmico - aceita localhost, *.vercel.app, Railway, e 127.0.0.1
@@ -40,17 +51,8 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
-// Test route
-app.get("/make-server-93f7c220/test", (req, res) => {
-    res.json({
-        success: true,
-        message: "Server is working!",
-        hasAuthHeader: !!req.headers.authorization,
-        timestamp: new Date().toISOString(),
-    });
-});
 // API Routes
-const apiPrefix = "/make-server-93f7c220";
+const apiPrefix = "";
 // Auth routes (public + some protected)
 app.use(`${apiPrefix}/auth`, authRoutes);
 // Books routes (all protected)
@@ -83,6 +85,8 @@ async function start() {
         process.exit(1);
     }
 }
-start();
+start().catch((error) => {
+    console.error("[Server] ❌ Unhandled error during server startup:", error);
+});
 export default app;
 //# sourceMappingURL=server.js.map

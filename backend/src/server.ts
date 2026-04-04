@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { initializeDatabase, runMigrations } from "./config/database.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { AuthController } from "./controllers/AuthController.js";
@@ -9,8 +10,21 @@ import { GoalsController } from "./controllers/GoalsController.js";
 import authRoutes from "./routes/auth.js";
 import booksRoutes from "./routes/books.js";
 import goalsRoutes from "./routes/goals.js";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-dotenv.config();
+// Substitui __dirname para compatibilidade com ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Carrega o arquivo .env explicitamente
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
+// Log para verificar o caminho do arquivo .env
+console.log("Caminho do arquivo .env:", path.resolve(__dirname, "../.env"));
+
+// Log para verificar se as variáveis de ambiente estão sendo carregadas
+console.log("Variáveis de ambiente carregadas:", process.env);
 
 const app = express();
 const PORT = process.env.PORT || 3000;

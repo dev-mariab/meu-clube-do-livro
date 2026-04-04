@@ -28,9 +28,9 @@ export class BookModel {
     return result.rows;
   }
 
-  static async findById(id: string): Promise<Book | null> {
+  static async findById(id: string): Promise<Book> {
     const result = await pool.query("SELECT * FROM books WHERE id = $1", [id] as any);
-    return result.rows[0] || null;
+    return this.findById(id) ?? (() => { throw new Error("Book not found"); })();
   }
 
   static async create(bookData: Omit<Book, "id" | "created_at" | "updated_at">): Promise<Book> {

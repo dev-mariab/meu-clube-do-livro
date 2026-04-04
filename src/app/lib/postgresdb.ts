@@ -99,10 +99,12 @@ function getAuthHeaders(): Record<string, string> {
   };
 }
 
+// Aumenta o tempo limite padrão para 60 segundos
 async function fetchApi(
   endpoint: string,
   options: RequestInit = {},
-  retries: number = 1
+  retries: number = 1,
+  timeout: number = 60000 // 60 segundos
 ): Promise<Response> {
   const url = `${API_URL}${API_PREFIX}${endpoint}`;
   const headers = {
@@ -111,49 +113,28 @@ async function fetchApi(
   };
 
   let lastError: any;
-  
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`[API] Calling ${url} (attempt ${attempt}/${retries})`);
-      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => {
-        console.error(`[API] Timeout after 30s - aborting request to ${url}`);
-        controller.abort();
-      }, 30000); // 30s timeout
-      
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
+      const id = setTimeout(() => controller.abort(), timeout);
+      const response = await fetch(url, { ...options, headers, signal: controller.signal });
+      clearTimeout(id);
 
-      clearTimeout(timeoutId);
-
-      console.log(`[API] Response status: ${response.status}`);
-
-      // Handle 401 - token expired/invalid
-      if (response.status === 401) {
-        clearSession();
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       return response;
     } catch (error: any) {
       lastError = error;
-      console.error(`[API] Attempt ${attempt} failed:`, error.message, error.name);
-      
-      if (error.name === 'AbortError') {
-        throw new Error(`Requisição expirou. O servidor demorou muito para responder.`);
-      }
-      
-      if (attempt < retries) {
-        // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      if (attempt === retries) {
+        throw lastError || new Error("Falha ao conectar com o servidor");
       }
     }
   }
-  
-  throw lastError || new Error('Falha ao conectar com o servidor');
+
+  throw lastError || new Error("Falha ao conectar com o servidor");
 }
 
 // Adiciona tratamento para tokens expirados e sincronização entre abas
