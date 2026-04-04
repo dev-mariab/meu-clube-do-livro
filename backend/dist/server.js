@@ -12,6 +12,7 @@ import booksRoutes from "./routes/books.js";
 import goalsRoutes from "./routes/goals.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import morgan from 'morgan';
 // Substitui __dirname para compatibilidade com ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,6 +22,8 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 console.log("Caminho do arquivo .env:", path.resolve(__dirname, "../.env"));
 // Log para verificar se as variáveis de ambiente estão sendo carregadas
 console.log("Variáveis de ambiente carregadas:", process.env);
+// Log adicional para verificar DATABASE_URL
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
 const app = express();
 const PORT = process.env.PORT || 3000;
 // CORS dinâmico - aceita localhost, *.vercel.app, Railway, e 127.0.0.1
@@ -32,6 +35,7 @@ function corsOrigin(origin) {
         /^http:\/\/127\.0\.0\.1(:\d+)?$/, // 127.0.0.1
         /vercel\.app$/, // *.vercel.app
         /railway\.app$/, // *.railway.app (inclui .up.railway.app)
+        /^https:\/\/meu-clube-do-livro\.vercel\.app$/, // Domínio completo do frontend
     ];
     const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
     console.log(`[CORS] Origin: ${origin}, Allowed: ${isAllowed}`);
@@ -47,6 +51,7 @@ app.use(cors({
 }));
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(morgan('combined'));
 // Health check route
 app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });

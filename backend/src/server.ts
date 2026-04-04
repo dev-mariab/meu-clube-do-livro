@@ -12,6 +12,7 @@ import booksRoutes from "./routes/books.js";
 import goalsRoutes from "./routes/goals.js";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import morgan from 'morgan';
 
 // Substitui __dirname para compatibilidade com ES Modules
 const __filename = fileURLToPath(import.meta.url);
@@ -41,6 +42,7 @@ function corsOrigin(origin: string | undefined): boolean {
     /^http:\/\/127\.0\.0\.1(:\d+)?$/,       // 127.0.0.1
     /vercel\.app$/,                          // *.vercel.app
     /railway\.app$/,                         // *.railway.app (inclui .up.railway.app)
+    /^https:\/\/meu-clube-do-livro\.vercel\.app$/, // Domínio completo do frontend
   ];
   
   const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
@@ -60,6 +62,7 @@ app.use(
 );
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
+app.use(morgan('combined'));
 
 // Health check route
 app.get("/health", (req, res) => {

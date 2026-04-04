@@ -8,9 +8,9 @@ const { Pool } = pg;
 const databaseUrl =
   process.env.DATABASE_URL ||
   (process.env.POSTGRES_USER && process.env.POSTGRES_PASSWORD && process.env.POSTGRES_HOST && process.env.POSTGRES_PORT && process.env.POSTGRES_DB
-    ? `postgresql://${process.env.POSTGRES_USER}:${String(process.env.POSTGRES_PASSWORD)}@${process.env.POSTGRES_HOST}:${process.env.POSTGRES_PORT}/${process.env.POSTGRES_DB}`
+    ? `postgresql://${String(process.env.POSTGRES_USER)}:${String(process.env.POSTGRES_PASSWORD)}@${String(process.env.POSTGRES_HOST)}:${String(process.env.POSTGRES_PORT)}/${String(process.env.POSTGRES_DB)}`
     : (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_HOST && process.env.DB_PORT && process.env.DB_NAME
-      ? `postgresql://${process.env.DB_USER}:${String(process.env.DB_PASSWORD)}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+      ? `postgresql://${String(process.env.DB_USER)}:${String(process.env.DB_PASSWORD)}@${String(process.env.DB_HOST)}:${String(process.env.DB_PORT)}/${String(process.env.DB_NAME)}`
       : undefined));
 
 if (!databaseUrl) {
