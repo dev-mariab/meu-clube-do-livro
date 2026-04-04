@@ -1,5 +1,4 @@
-import pg from "pg";
-declare const pool: pg.Pool;
+declare const pool: import("pg").Pool;
 export { pool };
 export declare function initializeDatabase(): Promise<void>;
 export declare function runMigrations(): Promise<void>;
