@@ -96,7 +96,7 @@ app.post(`${apiPrefix}/goals`, authMiddleware, (req, res) => GoalsController.set
 app.post(`${apiPrefix}/login`, (req, res) => AuthController.login(req, res));
 app.post(`${apiPrefix}/signup`, (req, res) => AuthController.signup(req, res));
 
-// Initialize database and start server
+// Adicionar logs detalhados para depuração
 async function start() {
   try {
     console.log("[Server] Initializing database...");
@@ -118,12 +118,18 @@ async function start() {
     });
   } catch (error) {
     console.error("[Server] ❌ Failed to start server:", error);
+    if (error instanceof Error) {
+      console.error("[Server] Stack trace:", error.stack);
+    }
     process.exit(1);
   }
 }
 
 start().catch((error) => {
   console.error("[Server] ❌ Unhandled error during server startup:", error);
+  if (error instanceof Error) {
+    console.error("[Server] Stack trace:", error.stack);
+  }
 });
 
 export default app;
