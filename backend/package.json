@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc --skipLibCheck",
-    "start": "tsx src/server.ts",
+    "start": "npm run build && node dist/server.js",
     "migrate": "tsx src/db/migrations.ts"
   },
   "keywords": [],

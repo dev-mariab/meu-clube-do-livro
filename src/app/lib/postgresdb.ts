@@ -4,7 +4,7 @@
 export interface AuthUser {
   id: string;
   email: string;
-  name?: string;
+  name: string; // Torna `name` obrigatório
 }
 
 interface StoredSession {
@@ -18,7 +18,7 @@ const isDevelopment = window.location.hostname === "localhost" || window.locatio
 const API_URL = isDevelopment 
   ? (import.meta.env.VITE_API_URL || "http://localhost:3001")
   : "https://meu-clube-do-livro-production.up.railway.app";
-const API_PREFIX = "/make-server-93f7c220";
+const API_PREFIX = "";
 
 function getStoredSession(): StoredSession | null {
   try {
@@ -155,6 +155,21 @@ async function fetchApi(
   
   throw lastError || new Error('Falha ao conectar com o servidor');
 }
+
+// Adiciona tratamento para tokens expirados e sincronização entre abas
+function handleTokenExpiration() {
+  const session = getStoredSession();
+  if (session && session.expiresAt < Date.now()) {
+    clearSession();
+    window.location.reload(); // Força o usuário a fazer login novamente
+  }
+}
+
+window.addEventListener("storage", (event) => {
+  if (event.key === "auth_session") {
+    handleTokenExpiration();
+  }
+});
 
 export const postgresDb = {
   // Auth methods

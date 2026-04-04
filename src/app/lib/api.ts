@@ -3,9 +3,7 @@ import { postgresDb } from "./postgresdb";
 
 // Detectar ambiente e usar URL correta
 const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const API_BASE_URL = isDevelopment
-  ? (import.meta.env.VITE_API_URL || "http://localhost:3000")
-  : "https://meu-clube-do-livro-production.up.railway.app";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 type Goals = { yearlyBookGoal: number | null; yearlyPageGoal: number | null };
 
@@ -111,13 +109,10 @@ export const api = {
   async getBook(id: string): Promise<Book> {
     try {
       const data = await postgresDb.getBook(id);
-      return typeof data === 'object' && data.book ? data.book : data;
+      return transformBook(data); // Garante que o retorno seja do tipo `Book`
     } catch (error: any) {
       if (error.message?.includes("Unauthorized")) {
-        const books = await getLocalBooks();
-        const found = books.find((b) => b.id === id);
-        if (!found) throw new Error("Book not found");
-        return found;
+        postgresDb.signOut();
       }
       throw error;
     }
@@ -275,3 +270,11 @@ export const api = {
     }
   },
 };
+
+// Ajusta a função transformBook para validar o tipo de entrada
+function transformBook(data: any): Book {
+  if (!data || typeof data !== "object" || !("book" in data)) {
+    throw new Error("Invalid book data");
+  }
+  return data.book;
+}
