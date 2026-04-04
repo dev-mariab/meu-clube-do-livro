@@ -39,6 +39,9 @@ function corsOrigin(origin) {
     ];
     const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
     console.log(`[CORS] Origin: ${origin}, Allowed: ${isAllowed}`);
+    if (!isAllowed) {
+        console.warn(`[CORS] Requisição bloqueada para a origem: ${origin}`);
+    }
     return isAllowed;
 }
 // Middleware

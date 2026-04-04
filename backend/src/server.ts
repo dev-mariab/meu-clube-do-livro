@@ -36,7 +36,7 @@ const PORT = process.env.PORT || 3000;
 // CORS dinâmico - aceita localhost, *.vercel.app, Railway, e 127.0.0.1
 function corsOrigin(origin: string | undefined): boolean {
   if (!origin) return true; // Mobile apps e desktop, requests sem origin header
-  
+
   const allowedPatterns = [
     /^http:\/\/localhost(:\d+)?$/,          // localhost
     /^http:\/\/127\.0\.0\.1(:\d+)?$/,       // 127.0.0.1
@@ -44,9 +44,14 @@ function corsOrigin(origin: string | undefined): boolean {
     /railway\.app$/,                         // *.railway.app (inclui .up.railway.app)
     /^https:\/\/meu-clube-do-livro\.vercel\.app$/, // Domínio completo do frontend
   ];
-  
+
   const isAllowed = allowedPatterns.some((pattern) => pattern.test(origin));
   console.log(`[CORS] Origin: ${origin}, Allowed: ${isAllowed}`);
+
+  if (!isAllowed) {
+    console.warn(`[CORS] Requisição bloqueada para a origem: ${origin}`);
+  }
+
   return isAllowed;
 }
 
