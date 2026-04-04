@@ -26,6 +26,9 @@ console.log("Caminho do arquivo .env:", path.resolve(__dirname, "../.env"));
 // Log para verificar se as variáveis de ambiente estão sendo carregadas
 console.log("Variáveis de ambiente carregadas:", process.env);
 
+// Log adicional para verificar DATABASE_URL
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
