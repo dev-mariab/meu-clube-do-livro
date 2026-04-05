@@ -41,7 +41,7 @@ app.get("/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 // API Routes
-const apiPrefix = "";
+const apiPrefix = "/api";
 // Auth routes (public + some protected)
 app.use(`${apiPrefix}/auth`, authRoutes);
 // Books routes (all protected)
