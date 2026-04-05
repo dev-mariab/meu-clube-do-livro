@@ -41,11 +41,14 @@ echo "Frontend PID: $FRONTEND_PID" >> "$PROJECT_DIR/.pids"
 # Aguardar frontend iniciar
 sleep 3
 
+# Obter IP local para acesso externo
+LOCAL_IP=$(hostname -I | awk '{print $1}')
+
 echo ""
 echo -e "${GREEN}✅ Serviços iniciados com sucesso!${NC}"
 echo ""
 echo -e "${BLUE}🌐 Acesse seu app aqui:${NC}"
-echo -e "   ${GREEN}http://localhost:5173${NC}"
+echo -e "   ${GREEN}http://$LOCAL_IP:5173${NC}"
 echo ""
 echo -e "${BLUE}📝 Login:${NC}"
 echo "   Email: pinhom913@gmail.com"
