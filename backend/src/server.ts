@@ -15,7 +15,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const apiPrefix = "";
+const apiPrefix = "/api";
 
 console.log("DATABASE_URL exists:", !!process.env.DATABASE_URL);
 console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);

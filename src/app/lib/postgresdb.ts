@@ -14,8 +14,10 @@ interface StoredSession {
 }
 
 // Detectar ambiente
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
-const API_PREFIX = "";
+const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:3002";
+
+const API_PREFIX = "/api";
 
 function getStoredSession(): StoredSession | null {
   try {
