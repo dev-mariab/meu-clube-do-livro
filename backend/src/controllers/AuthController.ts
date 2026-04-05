@@ -14,9 +14,13 @@ export class AuthController {
         return;
       }
 
+      console.log("Tentativa de cadastro com email:", email);
+      console.log("Dados recebidos:", req.body);
+
       // Check if user already exists
       const existingUser = await UserModel.findByEmail(email);
       if (existingUser) {
+        console.log("Email já registrado");
         res.status(400).json({ error: "Email already registered" });
         return;
       }
