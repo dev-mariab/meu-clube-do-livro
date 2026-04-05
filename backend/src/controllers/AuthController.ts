@@ -49,60 +49,57 @@ export class AuthController {
   }
 
   static async login(req: Request, res: Response): Promise<void> {
-    try {
-      const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-      if (!email || !password) {
-        console.log("[AuthController] Missing email or password");
-        res
-          .status(400)
-          .json({ error: "Email and password are required" });
-        return;
-      }
-
-      console.log(`[AuthController] Login attempt for: ${email}`);
-
-      // Find user
-      const user = await UserModel.findByEmail(email);
-      if (!user) {
-        console.log(`[AuthController] User not found: ${email}`);
-        res.status(401).json({ error: "Invalid login credentials" });
-        return;
-      }
-
-      // Verify password
-      const passwordHash = await UserModel.getPasswordHash(email);
-      if (!passwordHash) {
-        console.log(`[AuthController] No password hash for: ${email}`);
-        res.status(401).json({ error: "Invalid login credentials" });
-        return;
-      }
-
-      const isValid = await UserModel.verifyPassword(password, passwordHash);
-      if (!isValid) {
-        console.log(`[AuthController] Invalid password for: ${email}`);
-        res.status(401).json({ error: "Invalid login credentials" });
-        return;
-      }
-
-      // Generate token
-      const token = generateToken(user.id, user.email);
-
-      console.log(`[AuthController] Login successful for: ${email}`);
-
-      res.json({
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        },
-        token,
-      });
-    } catch (error) {
-      console.error("[AuthController] Login error:", error);
-      res.status(500).json({ error: "Failed to login" });
+    if (!email || !password) {
+      console.log("[AuthController] Missing email or password");
+      res.status(400).json({ error: "Email and password are required" });
+      return;
     }
+
+    console.log(`[AuthController] Login attempt for: ${email}`);
+
+    console.log("[AuthController] STEP 1 - before findByEmailWithPassword");
+    const user = await UserModel.findByEmailWithPassword(email);
+    console.log("[AuthController] STEP 2 - after findByEmailWithPassword", !!user);
+
+    if (!user) {
+      console.log(`[AuthController] User not found: ${email}`);
+      res.status(401).json({ error: "Invalid login credentials" });
+      return;
+    }
+
+    console.log("[AuthController] STEP 3 - before verifyPassword");
+    const isValid = await UserModel.verifyPassword(password, user.password_hash);
+    console.log("[AuthController] STEP 4 - after verifyPassword", isValid);
+
+    if (!isValid) {
+      console.log(`[AuthController] Invalid password for: ${email}`);
+      res.status(401).json({ error: "Invalid login credentials" });
+      return;
+    }
+
+    console.log("[AuthController] STEP 5 - before generateToken");
+    const token = generateToken(user.id, user.email);
+    console.log("[AuthController] STEP 6 - after generateToken");
+
+    console.log(`[AuthController] Login successful for: ${email}`);
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error("[AuthController] Login error:", error);
+    res.status(500).json({ error: "Failed to login" });
   }
+}
+
 
   static async getMe(req: Request, res: Response): Promise<void> {
     try {

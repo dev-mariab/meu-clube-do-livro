@@ -9,16 +9,40 @@ export interface User {
   updated_at: Date;
 }
 
+export interface UserWithPassword extends User {
+  password_hash: string;
+}
+
 export class UserModel {
   static async findByEmail(email: string): Promise<User | null> {
-    const result = await pool.query("SELECT * FROM users WHERE email = $1", [
-      email,
-    ]);
+    console.log("[UserModel] findByEmail:", email);
+
+    const result = await pool.query(
+      "SELECT id, email, name, created_at, updated_at FROM users WHERE email = $1 LIMIT 1",
+      [email]
+    );
+
+    console.log("[UserModel] findByEmail rows:", result.rows.length);
+    return result.rows[0] || null;
+  }
+
+  static async findByEmailWithPassword(email: string): Promise<UserWithPassword | null> {
+    console.log("[UserModel] findByEmailWithPassword:", email);
+
+    const result = await pool.query(
+      "SELECT id, email, name, password_hash, created_at, updated_at FROM users WHERE email = $1 LIMIT 1",
+      [email]
+    );
+
+    console.log("[UserModel] findByEmailWithPassword rows:", result.rows.length);
     return result.rows[0] || null;
   }
 
   static async findById(id: string): Promise<User | null> {
-    const result = await pool.query("SELECT * FROM users WHERE id = $1", [id]);
+    const result = await pool.query(
+      "SELECT id, email, name, created_at, updated_at FROM users WHERE id = $1 LIMIT 1",
+      [id]
+    );
     return result.rows[0] || null;
   }
 
@@ -34,15 +58,8 @@ export class UserModel {
     return result.rows[0];
   }
 
-  static async getPasswordHash(email: string): Promise<string | null> {
-    const result = await pool.query(
-      "SELECT password_hash FROM users WHERE email = $1",
-      [email]
-    );
-    return result.rows[0]?.password_hash || null;
-  }
-
   static async hashPassword(password: string): Promise<string> {
+    console.log("[UserModel] hashPassword");
     const salt = await bcrypt.genSalt(10);
     return bcrypt.hash(password, salt);
   }
@@ -51,6 +68,7 @@ export class UserModel {
     password: string,
     hash: string
   ): Promise<boolean> {
+    console.log("[UserModel] verifyPassword");
     return bcrypt.compare(password, hash);
   }
 
