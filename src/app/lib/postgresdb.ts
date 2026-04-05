@@ -14,10 +14,7 @@ interface StoredSession {
 }
 
 // Detectar ambiente
-const isDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-const API_URL = isDevelopment 
-  ? (import.meta.env.VITE_API_URL || "http://localhost:3001")
-  : "https://meu-clube-do-livro-production.up.railway.app";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3002";
 const API_PREFIX = "";
 
 function getStoredSession(): StoredSession | null {
@@ -104,7 +101,7 @@ async function fetchApi(
   endpoint: string,
   options: RequestInit = {},
   retries: number = 1,
-  timeout: number = 60000 // 60 segundos
+  timeout: number = 60000
 ): Promise<Response> {
   const url = `${API_URL}${API_PREFIX}${endpoint}`;
   const headers = {
@@ -115,19 +112,28 @@ async function fetchApi(
   let lastError: any;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+
     try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeout);
-      const response = await fetch(url, { ...options, headers, signal: controller.signal });
+      console.log(`[fetchApi] Requesting: ${url}`);
+
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
       clearTimeout(id);
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log(`[fetchApi] Response status: ${response.status} for ${url}`);
 
       return response;
     } catch (error: any) {
+      clearTimeout(id);
+      console.error(`[fetchApi] Attempt ${attempt} failed for ${url}:`, error);
       lastError = error;
+
       if (attempt === retries) {
         throw lastError || new Error("Falha ao conectar com o servidor");
       }
