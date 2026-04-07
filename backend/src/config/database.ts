@@ -42,17 +42,16 @@ const pool = new Pool({ connectionString: databaseUrl });
 export { pool };
 
 pool.on("error", (err: Error) => {
-  console.error("[DB] Unexpected error on idle client", err);
+  console.error("[DB] Erro inesperado no cliente inativo", err);
 });
 
 export async function initializeDatabase() {
   try {
     const client = await pool.connect();
-    const result = await client.query("SELECT NOW()");
-    console.log("[DB] ✅ Connected to PostgreSQL at", result.rows[0].now);
+    console.log("[DB] Conexão com o banco de dados inicializada com sucesso!");
     client.release();
   } catch (error) {
-    console.error("[DB] ❌ Failed to connect to PostgreSQL:", error);
+    console.error("[DB] Erro ao inicializar a conexão com o banco de dados:", error);
     throw error;
   }
 }
