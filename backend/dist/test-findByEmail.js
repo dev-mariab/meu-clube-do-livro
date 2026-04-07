@@ -1,5 +1,5 @@
-import { UserModel } from "../dist/models/User.js";
-import { pool } from "../dist/config/database.js";
+import { UserModel } from "../src/models/User.js";
+import { pool } from "../src/config/database.js";
 (async () => {
     try {
         const email = "teste@exemplo.com";
