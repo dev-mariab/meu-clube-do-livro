@@ -39,13 +39,14 @@ function corsOrigin(origin: string | undefined): boolean {
   return isAllowed;
 }
 
+// Ensure CORS middleware is properly configured to allow requests from the frontend
 app.use(
   cors({
-    origin: corsOrigin,
-    credentials: true,
+    origin: corsOrigin, // Function to dynamically check allowed origins
+    credentials: true, // Allow cookies and authentication headers
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
-    optionsSuccessStatus: 200,
+    optionsSuccessStatus: 200, // For legacy browsers
   })
 );
 
