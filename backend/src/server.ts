@@ -50,6 +50,18 @@ app.use(
   })
 );
 
+// Adicionando middleware de CORS para permitir requisições do frontend
+app.use(cors({
+  origin: (origin, callback) => {
+    if (corsOrigin(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
+
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 app.use(morgan("dev"));
