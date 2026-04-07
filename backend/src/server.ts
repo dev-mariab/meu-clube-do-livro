@@ -76,10 +76,6 @@ app.post(`${apiPrefix}/goals`, authMiddleware, (req, res) =>
   GoalsController.setGoals(req, res)
 );
 
-// Auth compatibility routes
-app.post(`${apiPrefix}/login`, (req, res) => AuthController.login(req, res));
-app.post(`${apiPrefix}/signup`, (req, res) => AuthController.signup(req, res));
-
 // User profile routes
 app.get(`${apiPrefix}/me`, authMiddleware, (req, res) =>
   AuthController.getMe(req, res)
