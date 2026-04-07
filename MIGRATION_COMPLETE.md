@@ -205,23 +205,9 @@ rm supabase/info.tsx
 Quando estiver pronto para deploy:
 
 ```bash
-# Backend - Deploy em Railway, Render, Heroku, etc.
+# Backend - Deploy em Render, Heroku, etc.
 # Frontend - Deploy em Vercel, Netlify, etc.
-# PostgreSQL - Usar serviço gerenciado (Railway, Render, AWS RDS, etc.)
-```
-
-Exemplo com Railway:
-
-```bash
-# Backend
-cd backend
-railway link
-railway run npm run build
-railway up
-
-# Frontend
-cd ..
-vercel deploy
+# PostgreSQL - Usar serviço gerenciado (Render, AWS RDS, etc.)
 ```
 
 ---

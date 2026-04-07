@@ -1,6 +1,6 @@
-# Configuração do Railway para o Backend
+# Configuração do Backend
 
-Siga os passos abaixo para configurar o Railway corretamente para o backend do projeto **Meu Clube do Livro**:
+Siga os passos abaixo para configurar o backend do projeto **Meu Clube do Livro**:
 
 ## 1. Configurar o Comando de Inicialização
 
