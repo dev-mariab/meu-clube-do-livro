@@ -1,4 +1,5 @@
 {
+  "exclude": ["dist"],
   "compilerOptions": {
     "target": "ES2020",
     "module": "Node16",
@@ -17,6 +18,5 @@
     "moduleResolution": "node16",
     "allowJs": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["src/**/*"]
 }

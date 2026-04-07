@@ -10,9 +10,12 @@ export class AuthController {
                     .json({ error: "Email and password are required" });
                 return;
             }
+            console.log("Tentativa de cadastro com email:", email);
+            console.log("Dados recebidos:", req.body);
             // Check if user already exists
             const existingUser = await UserModel.findByEmail(email);
             if (existingUser) {
+                console.log("Email já registrado");
                 res.status(400).json({ error: "Email already registered" });
                 return;
             }
@@ -41,34 +44,29 @@ export class AuthController {
             const { email, password } = req.body;
             if (!email || !password) {
                 console.log("[AuthController] Missing email or password");
-                res
-                    .status(400)
-                    .json({ error: "Email and password are required" });
+                res.status(400).json({ error: "Email and password are required" });
                 return;
             }
             console.log(`[AuthController] Login attempt for: ${email}`);
-            // Find user
-            const user = await UserModel.findByEmail(email);
+            console.log("[AuthController] STEP 1 - before findByEmailWithPassword");
+            const user = await UserModel.findByEmailWithPassword(email);
+            console.log("[AuthController] STEP 2 - after findByEmailWithPassword", !!user);
             if (!user) {
                 console.log(`[AuthController] User not found: ${email}`);
                 res.status(401).json({ error: "Invalid login credentials" });
                 return;
             }
-            // Verify password
-            const passwordHash = await UserModel.getPasswordHash(email);
-            if (!passwordHash) {
-                console.log(`[AuthController] No password hash for: ${email}`);
-                res.status(401).json({ error: "Invalid login credentials" });
-                return;
-            }
-            const isValid = await UserModel.verifyPassword(password, passwordHash);
+            console.log("[AuthController] STEP 3 - before verifyPassword");
+            const isValid = await UserModel.verifyPassword(password, user.password_hash);
+            console.log("[AuthController] STEP 4 - after verifyPassword", isValid);
             if (!isValid) {
                 console.log(`[AuthController] Invalid password for: ${email}`);
                 res.status(401).json({ error: "Invalid login credentials" });
                 return;
             }
-            // Generate token
+            console.log("[AuthController] STEP 5 - before generateToken");
             const token = generateToken(user.id, user.email);
+            console.log("[AuthController] STEP 6 - after generateToken");
             console.log(`[AuthController] Login successful for: ${email}`);
             res.json({
                 user: {
